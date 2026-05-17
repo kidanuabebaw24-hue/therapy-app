@@ -1,0 +1,138 @@
+.emergency-page {
+  padding: 1.6rem;
+}
+
+.emergency-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1.2rem;
+  margin-bottom: 1.6rem;
+}
+
+.stat-card {
+  background: var(--white);
+  border-radius: 0.6rem;
+  padding: 1.2rem;
+  text-align: center;
+  box-shadow: var(--shadow-md);
+  border-left: 3px solid;
+}
+
+.stat-card.pending {
+  border-left-color: var(--warning);
+}
+
+.stat-card.handled {
+  border-left-color: var(--success);
+}
+
+.stat-card.total {
+  border-left-color: var(--imperial-blue);
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+  margin-bottom: 0.4rem;
+}
+
+.stat-label {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.emergency-message {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--danger);
+}
+
+.severity-badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 1.6rem;
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.severity-critical {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+}
+
+.severity-high {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--warning);
+}
+
+.severity-medium {
+  background: rgba(0, 84, 166, 0.1);
+  color: var(--imperial-blue);
+}
+
+.severity-low {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--success);
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 1.6rem;
+  font-size: 0.6rem;
+  font-weight: 600;
+}
+
+.status-badge.pending {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--warning);
+}
+
+.status-badge.handled {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--success);
+}
+
+.time-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+}
+
+.handle-emergency-modal {
+  padding: 0.8rem 0;
+}
+
+.emergency-details {
+  background: var(--frost);
+  border-radius: 0.6rem;
+  padding: 0.8rem;
+  margin-bottom: 1.2rem;
+}
+
+.emergency-details h4 {
+  margin-bottom: 0.4rem;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.emergency-message-detail {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--danger);
+  margin: 0.4rem 0;
+}
+
+.emergency-severity {
+  margin-top: 0.4rem;
+  font-weight: 500;
+}

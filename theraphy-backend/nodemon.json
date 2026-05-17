@@ -1,0 +1,13 @@
+{
+  "ignore": [
+    "*.test.js",
+    "node_modules",
+    ".env",
+    ".git",
+    "test-*.js",
+    "list-users.js",
+    "debug-prisma.js"
+  ],
+  "watch": ["src"],
+  "ext": "js,json"
+}

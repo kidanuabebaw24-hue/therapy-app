@@ -1,0 +1,152 @@
+/* Layout Styles */
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--frost);
+}
+
+.main-wrapper {
+  flex: 1;
+  margin-left: 280px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: calc(100% - 280px);
+}
+
+.content-wrapper {
+  flex: 1;
+  padding: 2rem;
+  background-color: var(--frost);
+  overflow-y: auto;
+}
+
+/* For therapist layout */
+.main-content {
+  display: flex;
+  min-height: 100vh;
+}
+
+.content-area {
+  flex: 1;
+  margin-left: 280px;
+  background-color: var(--frost);
+  min-height: 100vh;
+  padding: 2rem;
+  width: calc(100% - 280px);
+}
+
+/* Loading styles */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, var(--imperial-blue) 0%, var(--imperial-blue-dark) 100%);
+}
+
+.loader {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #FFFFFF;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Container */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+/* Button Styles - No hover effects */
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 0.5rem;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background-color: var(--imperial-blue);
+  color: var(--white);
+}
+
+.btn-primary:hover {
+  background-color: var(--imperial-blue); /* No change */
+}
+
+.btn-secondary {
+  background-color: var(--platinum);
+  color: var(--text-primary);
+}
+
+.btn-secondary:hover {
+  background-color: var(--platinum); /* No change */
+}
+
+/* Card styles */
+.card {
+  background: var(--white);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--platinum);
+}
+
+.page-title {
+  font-size: 1.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2rem;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--frost);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--imperial-blue-light);
+  border-radius: 4px;
+}
+
+/* Utility classes */
+.text-primary {
+  color: var(--imperial-blue);
+}
+
+.bg-primary {
+  background-color: var(--imperial-blue);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .main-wrapper {
+    margin-left: 0;
+    width: 100%;
+  }
+  
+  .content-wrapper {
+    padding: 1rem;
+  }
+
+  .content-area {
+    margin-left: 0;
+    padding: 1rem;
+    width: 100%;
+  }
+}

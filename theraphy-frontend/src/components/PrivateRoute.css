@@ -1,0 +1,40 @@
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+  position: relative;
+}
+
+.main-wrapper {
+  flex: 1;
+  margin-left: 224px;
+  width: calc(100% - 224px);
+  transition: margin-left .25s ease, width .25s ease;
+}
+
+.content-wrapper {
+  padding: 1.6rem;
+  min-height: calc(100vh - 58px);
+  background: #f8f9fa;
+}
+
+.sidebar-overlay { display: none; }
+
+@media (max-width: 768px) {
+  .main-wrapper {
+    margin-left: 0;
+    width: 100%;
+  }
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+    animation: fadeIn .25s ease;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

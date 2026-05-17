@@ -1,0 +1,429 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+enum Role {
+  client
+  therapist
+  admin
+}
+
+enum AppointmentStatus {
+  scheduled
+  completed
+  cancelled
+  no_show
+}
+
+enum AppointmentType {
+  cbt
+  exposure
+  consultation
+  followup
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  refunded
+}
+
+enum Difficulty {
+  beginner
+  intermediate
+  advanced
+}
+
+enum AssessmentType {
+  anxiety
+  phobia
+  depression
+  ocd
+  general
+}
+
+enum Severity {
+  low
+  mild
+  moderate
+  severe
+  critical
+}
+
+model User {
+  id                String    @id @default(uuid())
+  email             String    @unique
+  password          String
+  name              String
+  role              Role      @default(client)
+  phone             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Profile relations
+  patientProfile    Patient?
+  therapistProfile  Therapist?
+
+  // Messaging & Notifications
+  sentMessages      ChatMessage[]  @relation("SentMessages")
+  receivedMessages  ChatMessage[]  @relation("ReceivedMessages")
+  notifications     Notification[]
+  
+  // Exercises created by admins/therapists
+  createdExercises   CBTExercise[]
+  aiConversations    AIConversation[]
+  handledEmergencies EmergencyLog[] @relation("HandledEmergencies")
+  reviewedBookings   BookingRequest[] @relation("ReviewedBookings")
+}
+
+
+
+model Patient {
+  id                      String    @id @default(uuid())
+  userId                  String    @unique
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  age                     Int?
+  gender                  String?
+  primaryPhobia           String?
+  currentAnxietyLevel     Int?
+  hasCompletedInitialCBT  Boolean   @default(false)
+  lastCbtReminder         DateTime?
+  anxietyAssessment       Json?
+
+  // Relations
+  emergencyContacts   EmergencyContact[]
+  appointments        Appointment[]
+  moodLogs            MoodLog[]
+  cbtProgress         CBTProgress[]
+  cbtResponses        CBTResponse[]
+  emergencyLogs       EmergencyLog[]
+  therapyProgress     TherapyProgress[]
+  assessments         Assessment[]
+  progressReports     ProgressReport[]
+  bookingRequests     BookingRequest[]
+  payments            Payment[]
+  therapistAssignments TherapistAssignment[]
+  exposureTherapies   ExposureTherapy[]
+}
+
+model Therapist {
+  id                String    @id @default(uuid())
+  userId            String    @unique
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  specialization    String?
+  licenseNumber     String?
+  yearsOfExperience Int?
+  hourlyRate        Float?
+  isVerified        Boolean   @default(false)
+  workingHours      Json?     // Array of {day, enabled, startTime, endTime}
+  about             String?
+  rating            Float     @default(0)
+
+  // Relations
+  appointments        Appointment[]
+  progressReports     ProgressReport[]
+  bookingRequests     BookingRequest[]
+  patientAssignments  TherapistAssignment[]
+  exposureTherapies   ExposureTherapy[]
+}
+
+
+model TherapistAssignment {
+  id          String   @id @default(uuid())
+  patientId   String
+  therapistId String
+  patient     Patient  @relation(fields: [patientId], references: [id])
+  therapist   Therapist @relation(fields: [therapistId], references: [id])
+  assignedAt  DateTime @default(now())
+  status      String   @default("active") // active, completed, terminated
+
+  @@unique([patientId, therapistId])
+}
+
+model CBTExercise {
+  id            String      @id @default(uuid())
+  title         String
+  description   String?
+  category      String?     // thought record, exposure, behavioral, mindfulness
+  instructions  String?
+  isMandatory   Boolean     @default(false)
+  order         Int         @default(0)
+  estimatedTime Int         @default(10)
+  difficulty    Difficulty  @default(beginner)
+  isActive      Boolean     @default(true)
+  createdById   String
+  createdBy     User        @relation(fields: [createdById], references: [id])
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  questions     CBTQuestion[]
+  progress      CBTProgress[]
+}
+
+model CBTQuestion {
+  id          String   @id @default(uuid())
+  exerciseId  String
+  exercise    CBTExercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  text        String
+  type        String   @default("TEXT") // TEXT, MULTIPLE_CHOICE
+  options     Json?    // For multiple choice
+  order       Int      @default(0)
+
+  responses   CBTResponse[]
+}
+
+model CBTResponse {
+  id          String   @id @default(uuid())
+  patientId   String
+  patient     Patient  @relation(fields: [patientId], references: [id])
+  questionId  String
+  question    CBTQuestion @relation(fields: [questionId], references: [id])
+  answer      Json
+  createdAt   DateTime @default(now())
+}
+
+model CBTProgress {
+  id          String      @id @default(uuid())
+  patientId   String
+  patient     Patient     @relation(fields: [patientId], references: [id])
+  exerciseId  String
+  exercise    CBTExercise @relation(fields: [exerciseId], references: [id])
+  completed   Boolean     @default(false)
+  reflection  String?
+  score       Int?
+  duration    Int?        // in minutes
+  completedAt DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@unique([patientId, exerciseId])
+}
+
+
+model Assessment {
+  id          String         @id @default(uuid())
+  patientId   String
+  patient     Patient        @relation(fields: [patientId], references: [id])
+  type        AssessmentType
+  score       Int
+  severity    Severity
+  notes       String?
+  createdAt   DateTime       @default(now())
+
+  responses   AssessmentResponse[]
+}
+
+model AssessmentResponse {
+  id            String     @id @default(uuid())
+  assessmentId  String
+  assessment    Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  question      String
+  questionId    String?
+  answer        String
+  score         Int
+}
+
+model Appointment {
+  id            String            @id @default(uuid())
+  patientId     String
+  patient       Patient           @relation(fields: [patientId], references: [id])
+  therapistId   String
+  therapist     Therapist         @relation(fields: [therapistId], references: [id])
+  date          DateTime
+  duration      Int               @default(60)
+  notes         String?
+  type          AppointmentType   @default(consultation)
+  status        AppointmentStatus @default(scheduled)
+  paymentStatus PaymentStatus     @default(pending)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  exposureTherapies ExposureTherapy[]
+  payments          Payment[]
+  progressRecords   TherapyProgress[]
+}
+
+
+
+
+model MoodLog {
+  id            String   @id @default(uuid())
+  patientId     String
+  patient       Patient  @relation(fields: [patientId], references: [id])
+  moodScore     Int
+  anxietyLevel  Int?
+  emotions      String[]
+  notes         String?
+  createdAt     DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String   @default("info")
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model EmergencyContact {
+  id           String  @id @default(uuid())
+  patientId    String
+  patient      Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  name         String
+  phone        String
+  relationship String?
+}
+
+model EmergencyLog {
+  id          String   @id @default(uuid())
+  patientId   String
+  patient     Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  message     String
+  severity    String   @default("medium")
+  handled     Boolean  @default(false)
+  handledBy   String?
+  handler     User?    @relation("HandledEmergencies", fields: [handledBy], references: [id])
+  notes       String?
+  createdAt   DateTime @default(now())
+}
+
+
+model ProgressReport {
+  id                    String    @id @default(uuid())
+  patientId             String
+  patient               Patient   @relation(fields: [patientId], references: [id])
+  therapistId           String?
+  therapist             Therapist? @relation(fields: [therapistId], references: [id])
+  startDate             DateTime
+  endDate               DateTime
+  sessionsCompleted     Int       @default(0)
+  averageMoodScore      Float?
+  averageAnxietyScore   Float?
+  improvementPercentage Float?
+  keyFindings           String?
+  recommendations       String?
+  goalsAchieved         String[]
+  nextGoals             String[]
+  generatedBy           String?   // role: client, therapist, admin
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+
+model BookingRequest {
+  id              String    @id @default(uuid())
+  patientId       String
+  patient         Patient   @relation(fields: [patientId], references: [id])
+  therapistId     String
+  therapist       Therapist @relation(fields: [therapistId], references: [id])
+  message         String?
+  preferredDate   DateTime?
+  status          String    @default("pending") // pending, approved, rejected, cancelled
+  adminNotes      String?
+  rejectionReason String?
+  reviewedById    String?
+  reviewedBy      User?     @relation("ReviewedBookings", fields: [reviewedById], references: [id])
+  reviewedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model TherapyProgress {
+  id              String    @id @default(uuid())
+  patientId       String
+  patient         Patient   @relation(fields: [patientId], references: [id])
+  appointmentId   String?
+  appointment     Appointment? @relation(fields: [appointmentId], references: [id])
+  moodScore       Int?
+  anxietyScore    Int?
+  therapistNotes  String?
+  progressLevel   String?
+  recommendations String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+
+
+model Payment {
+  id            String        @id @default(uuid())
+  patientId     String
+  patient       Patient       @relation(fields: [patientId], references: [id])
+  appointmentId String?
+  appointment   Appointment?  @relation(fields: [appointmentId], references: [id])
+  amount        Float
+  status        PaymentStatus @default(pending)
+  reference     String?
+  transactionId String?
+  paymentMethod String?
+  createdAt     DateTime      @default(now())
+}
+
+
+model ChatMessage {
+  id             String   @id @default(uuid())
+  conversationId String
+  senderId       String
+  sender         User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiverId     String
+  receiver       User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  content        String
+  type           String   @default("text") // text, image, file
+  isRead         Boolean  @default(false)
+  readAt         DateTime?
+  createdAt      DateTime @default(now())
+
+  @@index([conversationId])
+}
+
+
+model ExposureTherapy {
+  id              String   @id @default(uuid())
+  patientId       String
+  patient         Patient  @relation(fields: [patientId], references: [id])
+  therapistId     String?
+  therapist       Therapist? @relation(fields: [therapistId], references: [id])
+  appointmentId   String?
+  appointment     Appointment? @relation(fields: [appointmentId], references: [id])
+  phobiaType      String
+  exposureLevel   Int
+  duration        Int?
+  mediaType       String?
+  mediaUrl        String?
+  anxietyBefore   Int?
+  anxietyAfter    Int?
+  clientNotes     String?
+  status          String   @default("planned") // planned, in-progress, completed, paused
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+
+model AIConversation {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String   @default("New Conversation")
+  messages  Json     // Array of {role, content}
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+

@@ -1,0 +1,129 @@
+.clinical-documentation {
+  width: 100%;
+}
+.new-doc-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+}
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+.stat-card {
+  background: white;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: var(--shadow-sm);
+}
+.stat-card svg {
+  color: #3498db;
+}
+.stat-card div {
+  display: flex;
+  flex-direction: column;
+}
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #2c3e50;
+}
+.stat-label {
+  font-size: 0.875rem;
+  color: #7f8c8d;
+}
+.documents-table-container {
+  background: white;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-md);
+}
+.doc-date {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #2c3e50;
+}
+.doc-type {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 2rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+.doc-type.progress-note {
+  background: #3498db;
+  color: white;
+}
+.doc-type.intake-note {
+  background: #9b59b6;
+  color: white;
+}
+.doc-type.treatment-plan {
+  background: #27ae60;
+  color: white;
+}
+.doc-type.discharge-summary {
+  background: #f39c12;
+  color: white;
+}
+.doc-status {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 2rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+.doc-status.completed {
+  background: #27ae60;
+  color: white;
+}
+.doc-status.draft {
+  background: #95a5a6;
+  color: white;
+}
+.doc-status.scheduled {
+  background: #f39c12;
+  color: white;
+}
+.view-doc-modal,
+.new-doc-modal {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+.doc-header {
+  background: #f8fafd;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+.doc-header p {
+  margin: 0.25rem 0;
+  color: #2c3e50;
+}
+.doc-content {
+  padding: 1rem 0;
+}
+.doc-content h4 {
+  color: #2c3e50;
+  font-size: 1.125rem;
+  margin-bottom: 1rem;
+}
+.doc-content p {
+  color: #4a5568;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+@media (max-width: 768px) {
+  .stats-cards {
+    grid-template-columns: 1fr;
+  }
+}

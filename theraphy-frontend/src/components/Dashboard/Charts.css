@@ -1,0 +1,73 @@
+.chart-container {
+  background: var(--white);
+  border-radius: .6rem;
+  padding: 1.2rem;
+  box-shadow: var(--shadow-md);
+  margin-bottom: 1.2rem;
+}
+
+.chart-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 1.2rem;
+}
+
+/* Stats with Sparkline */
+.stats-sparkline-card {
+  background: var(--white);
+  border-radius: .6rem;
+  padding: 1rem;
+  box-shadow: var(--shadow-md);
+  min-width: 200px;
+}
+
+.stats-sparkline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: .6rem;
+}
+
+.stats-sparkline-header h4 {
+  font-size: .75rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+
+.stats-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.stats-sparkline-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.trend {
+  font-size: .75rem;
+  font-weight: 600;
+}
+
+.sparkline {
+  width: 80px;
+  height: 32px;
+}
+
+/* Chart Grid Layout */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 1.2rem;
+  margin: 1.2rem 0;
+}
+
+@media (max-width: 768px) {
+  .charts-grid { grid-template-columns: 1fr; }
+  .chart-container { padding: .8rem; }
+}
