@@ -65,6 +65,10 @@ app.get('/', (req, res) => {
   res.send('Theraphy API (PostgreSQL/Prisma) is running');
 });
 
+app.get('/api/health', (req, res) => {
+  res.json({ success: true, status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
