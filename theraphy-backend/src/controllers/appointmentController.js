@@ -9,6 +9,10 @@ import {
   getAppointmentsBaseWhere,
   getPendingPaymentCutoff,
 } from '../utils/appointmentBlocking.js';
+import {
+  resolveWorkingHours,
+  getScheduleForDay,
+} from '../utils/defaultWorkingHours.js';
 
 const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -173,7 +177,20 @@ const getDayAvailabilityContext = async ({
   const anchorTime = toUtcFromLocalParts(year, month, day, 12, 0, offset);
   const localMeta = getLocalDateMeta(anchorTime, offset);
   const normalizedDay = normalizeDayName(appointmentDay) || localMeta.weekday;
-  const workingWindow = getWorkingWindowMinutes(therapist.workingHours, normalizedDay);
+  const { hours: resolvedWorkingHours, usedDefault } = resolveWorkingHours(
+    therapist.workingHours,
+  );
+
+  if (usedDefault) {
+    await prisma.therapist
+      .update({
+        where: { id: therapistId },
+        data: { workingHours: resolvedWorkingHours },
+      })
+      .catch(() => {});
+  }
+
+  const workingWindow = getWorkingWindowMinutes(resolvedWorkingHours, normalizedDay);
   const pendingPaymentCutoff = getPendingPaymentCutoff();
   const dayWindow = getDailyUtcWindow(anchorTime, offset);
 
@@ -193,11 +210,7 @@ const getDayAvailabilityContext = async ({
     pendingPaymentCutoff,
   );
 
-  const schedule = Array.isArray(therapist.workingHours)
-    ? therapist.workingHours.find(
-        (entry) => normalizeDayName(entry?.day) === normalizedDay && entry?.enabled,
-      )
-    : null;
+  const schedule = getScheduleForDay(resolvedWorkingHours, normalizedDay);
 
   return {
     therapist,
@@ -206,6 +219,7 @@ const getDayAvailabilityContext = async ({
     dayAppointments,
     durationMinutes: Number(duration) || 50,
     timezoneOffsetMinutes: offset,
+    usedDefaultSchedule: usedDefault,
     workingHoursRange: schedule
       ? {
           startTime: schedule.startTime,
@@ -263,7 +277,8 @@ const checkTherapistAvailability = async ({
   const durationMinutes = Number(duration) || 50;
   const localMeta = getLocalDateMeta(startTime, timezoneOffsetMinutes);
   const normalizedDay = normalizeDayName(appointmentDay) || localMeta.weekday;
-  const workingWindow = getWorkingWindowMinutes(therapist.workingHours, normalizedDay);
+  const { hours: resolvedWorkingHours } = resolveWorkingHours(therapist.workingHours);
+  const workingWindow = getWorkingWindowMinutes(resolvedWorkingHours, normalizedDay);
   const pendingPaymentCutoff = getPendingPaymentCutoff();
   const dayWindow = getDailyUtcWindow(startTime, timezoneOffsetMinutes);
 
@@ -283,7 +298,7 @@ const checkTherapistAvailability = async ({
     pendingPaymentCutoff,
   );
 
-  const worksAtThatTime = isWithinWorkingHours(therapist.workingHours, startTime, duration, {
+  const worksAtThatTime = isWithinWorkingHours(resolvedWorkingHours, startTime, duration, {
     appointmentDay: normalizedDay,
     timezoneOffsetMinutes,
   });
@@ -389,6 +404,7 @@ export const getAvailableAppointmentSlots = async (req, res) => {
         workingHours: context.workingHoursRange,
         stepMinutes: SLOT_STEP_MINUTES,
         sessionDuration: context.durationMinutes,
+        usedDefaultSchedule: context.usedDefaultSchedule === true,
       },
       'Available slots retrieved',
     );
