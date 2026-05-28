@@ -55,7 +55,7 @@ export const getAllUsers = async (req, res) => {
 
     const users = await prisma.user.findMany({
       where,
-      include: { therapistProfile: true },
+      include: { therapistProfile: true, patientProfile: true },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -67,10 +67,13 @@ export const getAllUsers = async (req, res) => {
       createdAt: u.createdAt,
       phone: u.phone ?? null,
       isVerified: u.role === 'therapist' ? Boolean(u.therapistProfile?.isVerified) : true,
+      patientId: u.patientProfile?.id ?? null,
       therapistId: u.therapistProfile?.id ?? null,
       specialization: u.therapistProfile?.specialization ?? null,
       yearsOfExperience: u.therapistProfile?.yearsOfExperience ?? null,
       hourlyRate: u.therapistProfile?.hourlyRate ?? null,
+      primaryPhobia: u.patientProfile?.primaryPhobia ?? null,
+      currentAnxietyLevel: u.patientProfile?.currentAnxietyLevel ?? null,
     }));
 
     return sendSuccess(res, { users: formatted }, 'Users retrieved');

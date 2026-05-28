@@ -35,6 +35,8 @@ api.interceptors.response.use(
 );
 
 // ── Admin ──────────────────────────────────────────────────────────────────────
+const unwrap = (body) => body?.data ?? body;
+
 /** Unwrap { success, data } — supports data as array or data[key] as array. */
 const unwrapList = (body, key = "users") => {
   const payload = body?.data ?? body;

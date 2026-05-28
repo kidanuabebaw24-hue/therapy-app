@@ -6,6 +6,7 @@ import Modal from "../../../components/Common/Modal";
 import {
   getClients,
   getTherapists,
+  getAllUsers,
   assignTherapist,
   getAllAssignments,
   endAssignment,
@@ -35,18 +36,55 @@ const AssignTherapist = () => {
       setLoading(true);
 
       // Fetch clients and therapists
-      const [clientsData, therapistsData] = await Promise.all([
-        getClients(),
-        getTherapists(),
-      ]);
+      let processedClients = [];
+      let processedTherapists = [];
 
-      const processedClients = Array.isArray(clientsData)
-        ? clientsData
-        : clientsData?.clients ?? [];
+      try {
+        const clientsData = await getClients();
+        processedClients = Array.isArray(clientsData)
+          ? clientsData
+          : clientsData?.clients ?? [];
+      } catch (clientErr) {
+        console.warn('getClients failed, falling back to admin users:', clientErr);
+      }
 
-      const processedTherapists = Array.isArray(therapistsData)
-        ? therapistsData
-        : therapistsData?.therapists ?? [];
+      try {
+        const therapistsData = await getTherapists();
+        processedTherapists = Array.isArray(therapistsData)
+          ? therapistsData
+          : therapistsData?.therapists ?? [];
+      } catch (therapistErr) {
+        console.warn('getTherapists failed, falling back to admin users:', therapistErr);
+      }
+
+      if (processedClients.length === 0 || processedTherapists.length === 0) {
+        const allUsers = await getAllUsers({ all: 'true' });
+        if (processedClients.length === 0) {
+          processedClients = allUsers
+            .filter((u) => u.role === 'client' && u.patientId)
+            .map((u) => ({
+              id: u.patientId,
+              userId: u.id,
+              name: u.name,
+              email: u.email,
+              phone: u.phone,
+              primaryPhobia: u.primaryPhobia,
+              currentAnxietyLevel: u.currentAnxietyLevel,
+            }));
+        }
+        if (processedTherapists.length === 0) {
+          processedTherapists = allUsers
+            .filter((u) => u.role === 'therapist' && u.therapistId)
+            .map((u) => ({
+              id: u.therapistId,
+              name: u.name,
+              email: u.email,
+              specialization: u.specialization,
+              yearsOfExperience: u.yearsOfExperience,
+              isVerified: u.isVerified,
+            }));
+        }
+      }
 
       // Fetch all assignments
       let assignmentsData = [];
