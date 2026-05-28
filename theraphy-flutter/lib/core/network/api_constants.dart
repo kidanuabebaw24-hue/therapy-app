@@ -24,6 +24,8 @@ class ApiConstants {
   static const String therapists = '/therapists';
   static const String checkAppointmentAvailability =
       '/appointments/check-availability';
+  static const String availableAppointmentSlots =
+      '/appointments/available-slots';
   static const String bookAppointment = '/appointments/book';
   static const String appointments = '/appointments';
 

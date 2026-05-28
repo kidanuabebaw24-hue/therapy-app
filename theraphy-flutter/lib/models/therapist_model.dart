@@ -7,6 +7,7 @@ class TherapistModel {
   final String bio;
   final String imageUrl;
   final List<String> availableSlots;
+  final List<Map<String, dynamic>> workingHours;
   final double hourlyRate;
 
   const TherapistModel({
@@ -18,6 +19,7 @@ class TherapistModel {
     required this.bio,
     required this.imageUrl,
     required this.availableSlots,
+    this.workingHours = const [],
     required this.hourlyRate,
   });
 
@@ -30,6 +32,7 @@ class TherapistModel {
     'bio': bio,
     'imageUrl': imageUrl,
     'availableSlots': availableSlots,
+    'workingHours': workingHours,
     'hourlyRate': hourlyRate,
   };
 
@@ -42,6 +45,10 @@ class TherapistModel {
     bio: json['bio'] as String? ?? '',
     imageUrl: json['imageUrl'] as String? ?? '',
     availableSlots: List<String>.from(json['availableSlots'] as List? ?? []),
+    workingHours: (json['workingHours'] as List? ?? [])
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList(),
     hourlyRate: (json['hourlyRate'] as num?)?.toDouble() ?? 0.0,
   );
 }

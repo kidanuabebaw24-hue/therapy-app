@@ -5,7 +5,8 @@ import { sendSuccess, sendError } from '../utils/responseHelper.js';
 import prisma from '../config/prisma.js';
 import { createNotification } from '../utils/notificationHelper.js';
 
-const BLOCKING_STATUSES = ['pending_payment', 'pending_admin_approval', 'approved', 'scheduled', 'pending'];
+const BLOCKING_STATUSES = ['pending_admin_approval', 'approved', 'scheduled', 'pending'];
+const PENDING_PAYMENT_HOLD_MINUTES = 15;
 
 const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -40,6 +41,184 @@ const parseAppointmentDateTime = (
   const offset = Number.isFinite(Number(timezoneOffsetMinutes)) ? Number(timezoneOffsetMinutes) : 0;
   const parsed = new Date(utcTimestamp + offset * 60000);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const getLocalDateMeta = (startTime, timezoneOffsetMinutes = 0) => {
+  const offset = Number.isFinite(Number(timezoneOffsetMinutes)) ? Number(timezoneOffsetMinutes) : 0;
+  const local = new Date(startTime.getTime() - offset * 60000);
+  return {
+    year: local.getUTCFullYear(),
+    month: local.getUTCMonth() + 1,
+    day: local.getUTCDate(),
+    weekday: WEEKDAY_NAMES[local.getUTCDay()],
+    offset,
+  };
+};
+
+const toUtcFromLocalParts = (year, month, day, hour, minute, timezoneOffsetMinutes = 0) => {
+  const utcTimestamp = Date.UTC(year, month - 1, day, hour, minute, 0, 0);
+  return new Date(utcTimestamp + timezoneOffsetMinutes * 60000);
+};
+
+const getDailyUtcWindow = (startTime, timezoneOffsetMinutes = 0) => {
+  const meta = getLocalDateMeta(startTime, timezoneOffsetMinutes);
+  const startUtc = toUtcFromLocalParts(meta.year, meta.month, meta.day, 0, 0, meta.offset);
+  const endUtc = toUtcFromLocalParts(meta.year, meta.month, meta.day + 1, 0, 0, meta.offset);
+  return { startUtc, endUtc, meta };
+};
+
+const toLocalMinutes = (dateValue, timezoneOffsetMinutes = 0) => {
+  const date = new Date(dateValue);
+  const local = new Date(date.getTime() - timezoneOffsetMinutes * 60000);
+  return local.getUTCHours() * 60 + local.getUTCMinutes();
+};
+
+const formatMinutesToHHMM = (minutes) => {
+  const normalized = ((minutes % 1440) + 1440) % 1440;
+  const hour = Math.floor(normalized / 60)
+    .toString()
+    .padStart(2, '0');
+  const minute = (normalized % 60).toString().padStart(2, '0');
+  return `${hour}:${minute}`;
+};
+
+const getWorkingWindowMinutes = (workingHours, appointmentDay) => {
+  if (!Array.isArray(workingHours) || workingHours.length === 0) return null;
+  const day = normalizeDayName(appointmentDay);
+  const schedule = workingHours.find(
+    (entry) => normalizeDayName(entry?.day) === day && entry?.enabled,
+  );
+  if (!schedule) return null;
+
+  const [startHour, startMinute] = String(schedule.startTime || '00:00').split(':').map(Number);
+  const [endHour, endMinute] = String(schedule.endTime || '23:59').split(':').map(Number);
+  const start = (startHour || 0) * 60 + (startMinute || 0);
+  const end = (endHour || 23) * 60 + (endMinute || 59);
+  return end > start ? { start, end } : null;
+};
+
+const getBlockingWhereClause = (therapistId, excludeAppointmentId, pendingPaymentCutoff) => ({
+  therapistId,
+  ...(excludeAppointmentId ? { id: { not: excludeAppointmentId } } : {}),
+  OR: [
+    { status: { in: BLOCKING_STATUSES } },
+    {
+      status: 'pending_payment',
+      createdAt: { gte: pendingPaymentCutoff },
+    },
+  ],
+});
+
+const SLOT_STEP_MINUTES = 30;
+
+const listAvailableSlots = ({
+  workingWindow,
+  dayAppointments,
+  timezoneOffsetMinutes,
+  duration,
+  maxSuggestions,
+}) => {
+  if (!workingWindow) return [];
+  const latestStart = workingWindow.end - duration;
+  if (latestStart < workingWindow.start) return [];
+
+  const blockedIntervals = dayAppointments.map((appointment) => {
+    const start = toLocalMinutes(appointment.date, timezoneOffsetMinutes);
+    const end = start + (appointment.duration || duration);
+    return { start, end };
+  });
+
+  const suggestions = [];
+  for (
+    let cursor = workingWindow.start;
+    cursor <= latestStart;
+    cursor += SLOT_STEP_MINUTES
+  ) {
+    const proposedEnd = cursor + duration;
+    const conflict = blockedIntervals.some(
+      (interval) => cursor < interval.end && proposedEnd > interval.start,
+    );
+    if (!conflict) {
+      suggestions.push(formatMinutesToHHMM(cursor));
+    }
+    if (
+      Number.isFinite(maxSuggestions) &&
+      maxSuggestions > 0 &&
+      suggestions.length >= maxSuggestions
+    ) {
+      break;
+    }
+  }
+  return suggestions;
+};
+
+const generateSuggestedSlots = (params) =>
+  listAvailableSlots({ ...params, maxSuggestions: 5 });
+
+const getDayAvailabilityContext = async ({
+  therapistId,
+  appointmentDate,
+  appointmentDay,
+  timezoneOffsetMinutes,
+  duration = 50,
+  excludeAppointmentId,
+}) => {
+  const therapist = await prisma.therapist.findUnique({
+    where: { id: therapistId },
+    include: { user: true },
+  });
+  if (!therapist) {
+    return { therapist: null };
+  }
+
+  const offset = Number.isFinite(Number(timezoneOffsetMinutes))
+    ? Number(timezoneOffsetMinutes)
+    : 0;
+  const datePart = String(appointmentDate).split('T')[0];
+  const [year, month, day] = datePart.split('-').map(Number);
+  if ([year, month, day].some((v) => Number.isNaN(v))) {
+    return { therapist, invalidDate: true };
+  }
+
+  const anchorTime = toUtcFromLocalParts(year, month, day, 12, 0, offset);
+  const localMeta = getLocalDateMeta(anchorTime, offset);
+  const normalizedDay = normalizeDayName(appointmentDay) || localMeta.weekday;
+  const workingWindow = getWorkingWindowMinutes(therapist.workingHours, normalizedDay);
+  const pendingPaymentCutoff = new Date(Date.now() - PENDING_PAYMENT_HOLD_MINUTES * 60000);
+  const dayWindow = getDailyUtcWindow(anchorTime, offset);
+
+  const dayAppointments = await prisma.appointment.findMany({
+    where: {
+      ...getBlockingWhereClause(therapistId, excludeAppointmentId, pendingPaymentCutoff),
+      date: {
+        gte: dayWindow.startUtc,
+        lt: dayWindow.endUtc,
+      },
+    },
+    select: { id: true, date: true, duration: true, status: true, createdAt: true },
+    orderBy: { date: 'asc' },
+  });
+
+  const schedule = Array.isArray(therapist.workingHours)
+    ? therapist.workingHours.find(
+        (entry) => normalizeDayName(entry?.day) === normalizedDay && entry?.enabled,
+      )
+    : null;
+
+  return {
+    therapist,
+    normalizedDay,
+    workingWindow,
+    dayAppointments,
+    durationMinutes: Number(duration) || 50,
+    timezoneOffsetMinutes: offset,
+    workingHoursRange: schedule
+      ? {
+          startTime: schedule.startTime,
+          endTime: schedule.endTime,
+        }
+      : null,
+  };
 };
 
 const isWithinWorkingHours = (workingHours, startTime, duration, options = {}) => {
@@ -79,16 +258,48 @@ const checkTherapistAvailability = async ({
     include: { user: true },
   });
   if (!therapist) {
-    return { available: false, message: 'Therapist not found' };
+    return {
+      available: false,
+      reasonCode: 'therapist_not_found',
+      suggestedSlots: [],
+      message: 'Therapist not found',
+    };
   }
 
+  const durationMinutes = Number(duration) || 50;
+  const localMeta = getLocalDateMeta(startTime, timezoneOffsetMinutes);
+  const normalizedDay = normalizeDayName(appointmentDay) || localMeta.weekday;
+  const workingWindow = getWorkingWindowMinutes(therapist.workingHours, normalizedDay);
+  const pendingPaymentCutoff = new Date(Date.now() - PENDING_PAYMENT_HOLD_MINUTES * 60000);
+  const dayWindow = getDailyUtcWindow(startTime, timezoneOffsetMinutes);
+
+  const dayAppointments = await prisma.appointment.findMany({
+    where: {
+      ...getBlockingWhereClause(therapistId, excludeAppointmentId, pendingPaymentCutoff),
+      date: {
+        gte: dayWindow.startUtc,
+        lt: dayWindow.endUtc,
+      },
+    },
+    select: { id: true, date: true, duration: true, status: true, createdAt: true },
+    orderBy: { date: 'asc' },
+  });
+
   const worksAtThatTime = isWithinWorkingHours(therapist.workingHours, startTime, duration, {
-    appointmentDay,
+    appointmentDay: normalizedDay,
     timezoneOffsetMinutes,
   });
   if (!worksAtThatTime) {
+    const suggestedSlots = generateSuggestedSlots({
+      workingWindow,
+      dayAppointments,
+      timezoneOffsetMinutes,
+      duration: durationMinutes,
+    });
     return {
       available: false,
+      reasonCode: 'outside_working_hours',
+      suggestedSlots,
       message: 'This therapist is not available at the selected time. Please choose another slot.',
     };
   }
@@ -96,12 +307,10 @@ const checkTherapistAvailability = async ({
   const bookingEnd = new Date(startTime.getTime() + duration * 60000);
   const existing = await prisma.appointment.findMany({
     where: {
-      therapistId,
-      ...(excludeAppointmentId ? { id: { not: excludeAppointmentId } } : {}),
-      status: { in: BLOCKING_STATUSES },
+      ...getBlockingWhereClause(therapistId, excludeAppointmentId, pendingPaymentCutoff),
       date: { lt: bookingEnd },
     },
-    select: { id: true, date: true, duration: true },
+    select: { id: true, date: true, duration: true, status: true, createdAt: true },
   });
 
   const overlap = existing.some((appointment) => {
@@ -111,16 +320,82 @@ const checkTherapistAvailability = async ({
   });
 
   if (overlap) {
+    const suggestedSlots = generateSuggestedSlots({
+      workingWindow,
+      dayAppointments,
+      timezoneOffsetMinutes,
+      duration: durationMinutes,
+    });
+
+    const hasRecentPendingPayment = existing.some(
+      (appointment) => appointment.status === 'pending_payment',
+    );
     return {
       available: false,
+      reasonCode: hasRecentPendingPayment ? 'slot_temporarily_held' : 'overlap_conflict',
+      suggestedSlots,
       message: 'This therapist is not available at the selected time. Please choose another slot.',
     };
   }
 
   return {
     available: true,
+    reasonCode: 'available',
+    suggestedSlots: [],
     message: 'Therapist is available for this slot.',
   };
+};
+
+export const getAvailableAppointmentSlots = async (req, res) => {
+  try {
+    const {
+      therapistId,
+      appointmentDate,
+      appointmentDay,
+      timezoneOffsetMinutes,
+      duration = 50,
+    } = req.query;
+
+    if (!therapistId || !appointmentDate) {
+      return sendError(res, 'therapistId and appointmentDate are required', 400);
+    }
+
+    const context = await getDayAvailabilityContext({
+      therapistId,
+      appointmentDate,
+      appointmentDay,
+      timezoneOffsetMinutes,
+      duration: Number(duration) || 50,
+    });
+
+    if (!context.therapist) {
+      return sendError(res, 'Therapist not found', 404);
+    }
+    if (context.invalidDate) {
+      return sendError(res, 'Invalid appointment date format', 400);
+    }
+
+    const slots = listAvailableSlots({
+      workingWindow: context.workingWindow,
+      dayAppointments: context.dayAppointments,
+      timezoneOffsetMinutes: context.timezoneOffsetMinutes,
+      duration: context.durationMinutes,
+    });
+
+    return sendSuccess(
+      res,
+      {
+        slots,
+        appointmentDay: context.normalizedDay,
+        workingHours: context.workingHoursRange,
+        stepMinutes: SLOT_STEP_MINUTES,
+        sessionDuration: context.durationMinutes,
+      },
+      'Available slots retrieved',
+    );
+  } catch (error) {
+    return sendError(res, error.message, 500, error);
+  }
 };
 
 export const checkAppointmentAvailability = async (req, res) => {
@@ -473,8 +748,9 @@ export const bookAppointment = async (req, res) => {
         res,
         {
           available: false,
+          reasonCode: availability.reasonCode || 'unavailable',
           message: availability.message,
-          suggestedSlots: [],
+          suggestedSlots: availability.suggestedSlots || [],
         },
         availability.message,
         200,

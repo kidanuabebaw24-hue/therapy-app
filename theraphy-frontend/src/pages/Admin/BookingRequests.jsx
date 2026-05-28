@@ -23,6 +23,22 @@ const BookingRequests = () => {
     fetchRequests();
   }, [filter]);
 
+  const normalizeStatus = (status) => {
+    if (status === 'pending_admin_approval' || status === 'pending_payment' || status === 'pending') {
+      return 'pending';
+    }
+    if (status === 'approved' || status === 'scheduled') {
+      return 'approved';
+    }
+    if (status === 'rejected') {
+      return 'rejected';
+    }
+    if (status === 'cancelled') {
+      return 'cancelled';
+    }
+    return status || 'pending';
+  };
+
   const fetchRequests = async () => {
     try {
       setLoading(true);
@@ -30,6 +46,8 @@ const BookingRequests = () => {
       const rows = response?.data ?? response ?? [];
       const mappedRequests = rows.map(req => ({
         ...req,
+        originalStatus: req.status,
+        status: normalizeStatus(req.status),
         client: req.patient?.user || {},
         therapist: req.therapist?.user || {},
         preferredDate: req.date,
@@ -114,6 +132,10 @@ const BookingRequests = () => {
     }
   };
 
+  const filteredRequests = filter === 'all'
+    ? requests
+    : requests.filter((r) => r.status === filter);
+
   const pendingCount = requests.filter(r => r.status === 'pending').length;
 
   return (
@@ -164,7 +186,7 @@ const BookingRequests = () => {
           <div className="loader"></div>
           <p>Loading requests...</p>
         </div>
-      ) : requests.length === 0 ? (
+      ) : filteredRequests.length === 0 ? (
         <div className="no-requests">
           <div className="no-requests-icon">📋</div>
           <h3>No booking requests</h3>
@@ -172,7 +194,7 @@ const BookingRequests = () => {
         </div>
       ) : (
         <div className="requests-grid">
-          {requests.map((request) => (
+          {filteredRequests.map((request) => (
             <div key={request.id} className="request-card">
               <div className="request-header">
                 <div className="client-info">

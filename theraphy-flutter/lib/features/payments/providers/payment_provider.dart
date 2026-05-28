@@ -5,6 +5,7 @@ import '../services/mock_payment_service.dart';
 import '../../../../models/therapist_model.dart';
 import '../../auth/presentation/providers/auth_provider.dart';
 import '../../../../core/network/network_providers.dart';
+import '../../../../core/utils/slot_time_utils.dart';
 
 class PaymentState {
   final BookingPaymentModel? currentBooking;
@@ -17,6 +18,8 @@ class PaymentState {
   final bool isVerified;
   final bool isAvailable;
   final String? availabilityMessage;
+  final String? availabilityReasonCode;
+  final List<String> suggestedSlots;
 
   const PaymentState({
     this.currentBooking,
@@ -29,6 +32,8 @@ class PaymentState {
     this.isVerified = false,
     this.isAvailable = false,
     this.availabilityMessage,
+    this.availabilityReasonCode,
+    this.suggestedSlots = const [],
   });
 
   PaymentState copyWith({
@@ -42,6 +47,8 @@ class PaymentState {
     bool? isVerified,
     bool? isAvailable,
     String? availabilityMessage,
+    String? availabilityReasonCode,
+    List<String>? suggestedSlots,
   }) {
     return PaymentState(
       currentBooking: currentBooking ?? this.currentBooking,
@@ -55,6 +62,8 @@ class PaymentState {
       isVerified: isVerified ?? this.isVerified,
       isAvailable: isAvailable ?? this.isAvailable,
       availabilityMessage: availabilityMessage,
+      availabilityReasonCode: availabilityReasonCode,
+      suggestedSlots: suggestedSlots ?? this.suggestedSlots,
     );
   }
 }
@@ -103,27 +112,40 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
       isCheckingAvailability: true,
       error: null,
       availabilityMessage: null,
+      availabilityReasonCode: null,
+      suggestedSlots: const [],
       isAvailable: false,
     );
 
     try {
       final apiClient = _ref.read(apiClientProvider);
-      final datePart =
-          '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-      final bookingDate = combineDateAndTime(date, timeSlot);
-      final timePart =
-          '${bookingDate.hour.toString().padLeft(2, '0')}:${bookingDate.minute.toString().padLeft(2, '0')}';
+      final datePart = SlotTimeUtils.formatDatePart(date);
+      final timePart = SlotTimeUtils.toBackendTime(timeSlot);
+      final dayName = SlotTimeUtils.weekdayName(date.weekday);
+      final timezoneOffsetMinutes = DateTime(
+        date.year,
+        date.month,
+        date.day,
+      ).timeZoneOffset.inMinutes;
 
       final response =
           await apiClient.post('/appointments/check-availability', data: {
         'therapistId': therapistId,
         'appointmentDate': datePart,
         'appointmentTime': timePart,
+        'appointmentDay': dayName,
+        'timezoneOffsetMinutes': timezoneOffsetMinutes,
         'duration': duration,
       });
 
       final payload = response.data['data'] ?? {};
       final available = payload['available'] == true;
+      final reasonCode = payload['reasonCode']?.toString();
+      final suggestionsRaw = (payload['suggestedSlots'] as List? ?? const [])
+          .map((item) => item.toString())
+          .toList();
+      final suggestedSlots =
+          suggestionsRaw.map((s) => SlotTimeUtils.toBackendTime(s)).toList();
       final message = (payload['message'] as String?) ??
           (available
               ? 'Therapist is available for this time slot.'
@@ -133,6 +155,8 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
         isCheckingAvailability: false,
         isAvailable: available,
         availabilityMessage: message,
+        availabilityReasonCode: reasonCode,
+        suggestedSlots: suggestedSlots,
       );
       return available;
     } catch (e) {
@@ -141,6 +165,8 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
         isAvailable: false,
         availabilityMessage:
             'This therapist is not available at the selected time. Please choose another slot.',
+        availabilityReasonCode: null,
+        suggestedSlots: const [],
         error: e.toString(),
       );
       return false;
@@ -157,25 +183,27 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
     }
   }
 
+  void clearAvailabilityFeedback() {
+    state = state.copyWith(
+      availabilityMessage: null,
+      availabilityReasonCode: null,
+      suggestedSlots: const [],
+      isAvailable: false,
+      error: null,
+    );
+  }
+
   /// Helper to parse timeSlot (e.g. "10:00 AM", "02:30 PM")
   /// and combine with DateTime date.
   DateTime combineDateAndTime(DateTime date, String timeSlot) {
     try {
-      final parts = timeSlot.trim().split(' ');
-      final timeParts = parts[0].split(':');
-      int hour = int.parse(timeParts[0]);
-      final int minute = int.parse(timeParts[1]);
-      final isPm = parts[1].toLowerCase() == 'pm';
-
-      if (isPm && hour < 12) {
-        hour += 12;
-      } else if (!isPm && hour == 12) {
-        hour = 0;
-      }
-
+      final backendTime = SlotTimeUtils.toBackendTime(timeSlot);
+      final timeParts = backendTime.split(':');
+      final hour = int.parse(timeParts[0]);
+      final minute = int.parse(timeParts[1]);
       return DateTime(date.year, date.month, date.day, hour, minute);
     } catch (e) {
-      return date; // fallback to selected day morning
+      return date;
     }
   }
 

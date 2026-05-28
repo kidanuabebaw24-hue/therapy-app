@@ -1,5 +1,24 @@
 import api from "./api";
 
+const normalizeBookingStatus = (status) => {
+  if (status === "pending_admin_approval" || status === "pending_payment" || status === "pending") {
+    return "pending";
+  }
+  if (status === "approved" || status === "scheduled") {
+    return "approved";
+  }
+  if (status === "rejected") {
+    return "rejected";
+  }
+  return status || "pending";
+};
+
+const extractRows = (payload) => {
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload)) return payload;
+  return [];
+};
+
 // ── Client ─────────────────────────────────────────────────────────────────────
 
 /** POST /booking — client creates a booking request */
@@ -20,15 +39,46 @@ export const cancelBookingRequest = (requestId) =>
  * GET /admin/bookings?status=...
  */
 export const getAllBookingRequests = (status = "all") => {
-  const params = status && status !== "all" ? { status } : undefined;
   return api
-    .get("/admin/bookings", { params })
-    .then((res) => res.data)
+    .get("/admin/bookings")
+    .then((res) => {
+      const payload = res.data ?? {};
+      const rows = extractRows(payload);
+
+      if (status === "all") {
+        return {
+          ...payload,
+          data: rows,
+        };
+      }
+
+      const filtered = rows.filter((item) => normalizeBookingStatus(item.status) === status);
+      return {
+        ...payload,
+        data: filtered,
+      };
+    })
     .catch((error) => {
       // Backward-compatible fallback for older deployed backend versions
       if (error?.response?.status === 404) {
-        const legacyUrl = status === "pending" ? "/booking/pending" : "/booking";
-        return api.get(legacyUrl).then((res) => res.data);
+        const legacyUrl = "/booking";
+        return api.get(legacyUrl).then((res) => {
+          const payload = res.data ?? {};
+          const rows = extractRows(payload);
+
+          if (status === "all") {
+            return {
+              ...payload,
+              data: rows,
+            };
+          }
+
+          const filtered = rows.filter((item) => normalizeBookingStatus(item.status) === status);
+          return {
+            ...payload,
+            data: filtered,
+          };
+        });
       }
       throw error;
     });

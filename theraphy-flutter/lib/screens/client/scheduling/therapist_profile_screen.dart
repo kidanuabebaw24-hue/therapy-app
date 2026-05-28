@@ -8,6 +8,7 @@ import '../../../models/therapist_model.dart';
 import '../../../widgets/app_button.dart';
 import '../../../widgets/app_image.dart';
 import '../../../features/payments/providers/payment_provider.dart';
+import 'therapist_slots_service.dart';
 
 class TherapistProfileScreen extends ConsumerStatefulWidget {
   final TherapistModel therapist;
@@ -24,10 +25,53 @@ class _TherapistProfileScreenState
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
   String? _selectedSlot;
+  List<String> _daySlots = [];
+  String? _workingHoursLabel;
+  bool _loadingSlots = false;
+  String? _slotsError;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedDay = DateTime.now();
+    _loadSlotsForDay(_selectedDay!);
+  }
+
+  Future<void> _loadSlotsForDay(DateTime day) async {
+    setState(() {
+      _loadingSlots = true;
+      _slotsError = null;
+      _selectedSlot = null;
+    });
+    ref.read(paymentProvider.notifier).clearAvailabilityFeedback();
+
+    try {
+      final result = await ref.read(therapistSlotsServiceProvider).fetchSlots(
+            therapistId: widget.therapist.id,
+            date: day,
+          );
+      if (!mounted) return;
+      setState(() {
+        _daySlots = result.slots;
+        _workingHoursLabel = result.workingHoursLabel;
+        _loadingSlots = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _daySlots = [];
+        _workingHoursLabel = null;
+        _loadingSlots = false;
+        _slotsError = 'Could not load available slots. Please try again.';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final paymentState = ref.watch(paymentProvider);
+    final selectedDay = _selectedDay ?? _focusedDay;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: CustomScrollView(
@@ -100,6 +144,7 @@ class _TherapistProfileScreenState
                           _selectedDay = selectedDay;
                           _focusedDay = focusedDay;
                         });
+                        _loadSlotsForDay(selectedDay);
                       },
                       headerStyle: const HeaderStyle(
                         formatButtonVisible: false,
@@ -117,28 +162,59 @@ class _TherapistProfileScreenState
                   const SizedBox(height: 32),
                   const Text('Available Slots',
                       style: AppTextStyles.headlineMedium),
+                  if (_workingHoursLabel != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Working hours: $_workingHoursLabel (30 min slots)',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textHint,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: widget.therapist.availableSlots.map((slot) {
-                      final isSelected = _selectedSlot == slot;
-                      return ChoiceChip(
-                        label: Text(slot),
-                        selected: isSelected,
-                        onSelected: (selected) => setState(
-                            () => _selectedSlot = selected ? slot : null),
-                        selectedColor: AppColors.primary.withValues(alpha: 0.2),
-                        labelStyle: TextStyle(
+                  if (_loadingSlots)
+                    const Center(child: CircularProgressIndicator())
+                  else if (_slotsError != null)
+                    Text(
+                      _slotsError!,
+                      style: AppTextStyles.bodySmall
+                          .copyWith(color: Colors.redAccent.shade700),
+                    )
+                  else if (_daySlots.isEmpty)
+                    Text(
+                      'No available slots for this day. Please choose another date.',
+                      style: AppTextStyles.bodySmall
+                          .copyWith(color: Colors.redAccent.shade700),
+                    )
+                  else
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: _daySlots.map((slot) {
+                        final isSelected = _selectedSlot == slot;
+                        return ChoiceChip(
+                          label: Text(slot),
+                          selected: isSelected,
+                          onSelected: (selected) {
+                            setState(() => _selectedSlot = selected ? slot : null);
+                            ref
+                                .read(paymentProvider.notifier)
+                                .clearAvailabilityFeedback();
+                          },
+                          selectedColor:
+                              AppColors.primary.withValues(alpha: 0.2),
+                          labelStyle: TextStyle(
                             color: isSelected
                                 ? AppColors.primary
                                 : AppColors.textPrimary,
                             fontWeight: isSelected
                                 ? FontWeight.bold
-                                : FontWeight.normal),
-                      );
-                    }).toList(),
-                  ),
+                                : FontWeight.normal,
+                          ),
+                        );
+                      }).toList(),
+                    ),
                   if (paymentState.availabilityMessage != null) ...[
                     const SizedBox(height: 16),
                     Container(
@@ -181,6 +257,33 @@ class _TherapistProfileScreenState
                         ],
                       ),
                     ),
+                    if (!paymentState.isAvailable &&
+                        paymentState.suggestedSlots.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        'Suggested slots',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: Colors.redAccent.shade700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: paymentState.suggestedSlots.map((slot) {
+                          return ActionChip(
+                            label: Text(slot),
+                            onPressed: () {
+                              setState(() => _selectedSlot = slot);
+                              ref
+                                  .read(paymentProvider.notifier)
+                                  .clearAvailabilityFeedback();
+                            },
+                          );
+                        }).toList(),
+                      ),
+                    ],
                   ],
                   const SizedBox(height: 40),
                   AppButton(
@@ -188,23 +291,23 @@ class _TherapistProfileScreenState
                     isLoading: paymentState.isCheckingAvailability,
                     onPressed: (_selectedDay != null &&
                             _selectedSlot != null &&
-                            !paymentState.isCheckingAvailability)
+                            !paymentState.isCheckingAvailability &&
+                            !_loadingSlots)
                         ? () async {
                             final isAvailable = await ref
                                 .read(paymentProvider.notifier)
                                 .checkTherapistAvailability(
                                   therapistId: widget.therapist.id,
-                                  date: _selectedDay!,
+                                  date: selectedDay,
                                   timeSlot: _selectedSlot!,
                                 );
 
                             if (!context.mounted) return;
-
                             if (!isAvailable) return;
 
                             ref.read(paymentProvider.notifier).initiateBooking(
                                   therapist: widget.therapist,
-                                  date: _selectedDay!,
+                                  date: selectedDay,
                                   timeSlot: _selectedSlot!,
                                 );
                             context.push('/booking/summary');
