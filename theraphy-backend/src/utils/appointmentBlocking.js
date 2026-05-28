@@ -32,11 +32,13 @@ export const filterBlockingAppointments = (appointments, pendingPaymentCutoff) =
     isBlockingAppointment(appointment, pendingPaymentCutoff),
   );
 
-/** Prisma-safe where clause (no enum values that may be missing before migration). */
+/**
+ * Prisma where clause without status filters.
+ * Production DB enum may be out of sync with schema; filtering status in memory only.
+ */
 export const getAppointmentsBaseWhere = (therapistId, excludeAppointmentId) => ({
   therapistId,
   ...(excludeAppointmentId ? { id: { not: excludeAppointmentId } } : {}),
-  status: { notIn: NON_BLOCKING_STATUSES },
 });
 
 export const getPendingPaymentCutoff = () =>
