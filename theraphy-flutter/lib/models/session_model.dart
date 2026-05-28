@@ -1,4 +1,4 @@
-﻿/// Represents an Appointment from the PostgreSQL/Prisma backend.
+/// Represents an Appointment from the PostgreSQL/Prisma backend.
 /// Backend route: /api/appointments
 class SessionModel {
   final String id;
@@ -8,8 +8,9 @@ class SessionModel {
   final String? therapistName;
   final DateTime date;
   final int duration;
-  final String type;        // cbt | exposure | consultation | followup
-  final String status;      // scheduled | completed | cancelled | no_show
+  final String type; // cbt | exposure | consultation | followup
+  final String
+      status; // pending_payment | pending_admin_approval | approved | rejected | scheduled | completed | cancelled | no_show
   final String paymentStatus; // pending | paid | refunded
   final String? notes;
   final DateTime createdAt;
@@ -32,6 +33,14 @@ class SessionModel {
   bool get isScheduled => status == 'scheduled';
   bool get isCompleted => status == 'completed';
   bool get isCancelled => status == 'cancelled';
+  bool get isPending =>
+      status == 'pending' ||
+      status == 'pending_admin_approval' ||
+      status == 'pending_payment';
+  bool get isPendingPayment => status == 'pending_payment';
+  bool get isPendingAdminApproval => status == 'pending_admin_approval';
+  bool get isApproved => status == 'approved';
+  bool get isRejected => status == 'rejected';
   bool get isPaid => paymentStatus == 'paid';
 
   factory SessionModel.fromJson(Map<String, dynamic> json) {

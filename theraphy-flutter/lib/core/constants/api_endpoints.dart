@@ -1,4 +1,4 @@
-﻿class ApiEndpoints {
+class ApiEndpoints {
   ApiEndpoints._();
 
   // Auth
@@ -79,6 +79,11 @@
 
   // Reports
   static const String reports = '/reports';
+
+  // Notifications
+  static const String myNotifications = '/notifications/my';
+  static String markNotificationRead(String id) => '/notifications/$id/read';
+  static const String markAllNotificationsRead = '/notifications/read-all';
 
   // Admin
   static const String adminStats = '/admin/stats';

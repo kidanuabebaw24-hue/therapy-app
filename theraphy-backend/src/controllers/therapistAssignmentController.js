@@ -10,7 +10,7 @@ export const assignTherapist = async (req, res) => {
     // Deactivate previous
     await prisma.therapistAssignment.updateMany({
       where: { patientId: clientId, status: 'active' },
-      data: { status: 'inactive', endDate: new Date() },
+      data: { status: 'inactive' },
     });
     
     const assignment = await prisma.therapistAssignment.create({

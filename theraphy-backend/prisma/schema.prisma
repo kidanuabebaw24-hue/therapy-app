@@ -3,7 +3,6 @@
 
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["driverAdapters"]
 }
 
 
@@ -20,10 +19,15 @@ enum Role {
 }
 
 enum AppointmentStatus {
+  pending_payment
+  pending_admin_approval
   scheduled
   completed
   cancelled
   no_show
+  pending
+  approved
+  rejected
 }
 
 enum AppointmentType {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:theraphy_flutter/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -61,6 +62,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     ref.listen(authProvider, (previous, next) {
       if (next.status == AuthStatus.error && next.error != null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -72,13 +75,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // Background Gradient
           Container(
             decoration: const BoxDecoration(
               gradient: AppColors.softBlueGradient,
             ),
           ),
-          
           SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -87,24 +88,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 children: [
                   const BackButton(),
                   const SizedBox(height: 20),
-                  
                   Text(
-                    "Join Us",
+                    l10n.joinUs,
                     style: AppTextStyles.headlineLarge.copyWith(
                       fontWeight: FontWeight.bold,
                       color: AppColors.textPrimary,
                     ),
                   ).animate().fade().slideX(begin: -0.1, end: 0),
-                  
                   const SizedBox(height: 8),
-                  
                   Text(
-                    "Start your path to tranquility today.",
+                    l10n.startYourPath,
                     style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textSecondary),
                   ).animate().fade(delay: 100.ms).slideX(begin: -0.1, end: 0),
-                  
                   const SizedBox(height: 40),
-                  
                   GlassCard(
                     padding: const EdgeInsets.all(32),
                     child: Form(
@@ -114,39 +110,41 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         children: [
                           AuthTextField(
                             controller: _nameController,
-                            hintText: "Full Name",
+                            hintText: l10n.fullName,
                             prefixIcon: Icons.person_outline_rounded,
-                            validator: (val) => val == null || val.isEmpty ? "Enter your name" : null,
+                            validator: (val) => val == null || val.isEmpty
+                                ? l10n.enterYourName
+                                : null,
                           ),
                           const SizedBox(height: 20),
                           AuthTextField(
                             controller: _emailController,
-                            hintText: "Email Address",
+                            hintText: l10n.emailAddress,
                             prefixIcon: Icons.email_outlined,
                             keyboardType: TextInputType.emailAddress,
-                            validator: (val) => val == null || !val.contains('@') ? "Enter a valid email" : null,
+                            validator: (val) => val == null || !val.contains('@')
+                                ? l10n.invalidEmail
+                                : null,
                           ),
                           const SizedBox(height: 20),
                           AuthTextField(
                             controller: _passwordController,
-                            hintText: "Password",
+                            hintText: l10n.password,
                             prefixIcon: Icons.lock_outline_rounded,
                             isPassword: true,
-                            validator: (val) => val == null || val.length < 6 ? "Password must be at least 6 characters" : null,
+                            validator: (val) => val == null || val.length < 6
+                                ? l10n.passwordMinLength
+                                : null,
                           ),
-                          
                           const SizedBox(height: 32),
-                          
                           AuthButton(
-                            text: "Sign Up",
+                            text: l10n.signUp,
                             onPressed: _handleRegister,
                             isLoading: _isLoading,
                           ),
-                          
                           const SizedBox(height: 16),
-                          
                           Text(
-                            "By signing up, you agree to our Terms of Service and Privacy Policy.",
+                            l10n.termsNotice,
                             textAlign: TextAlign.center,
                             style: AppTextStyles.bodySmall.copyWith(color: AppColors.textHint),
                           ),
@@ -154,21 +152,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       ),
                     ),
                   ).animate().fade(delay: 200.ms).scale(duration: 500.ms, curve: Curves.easeOutBack),
-                  
                   const SizedBox(height: 32),
-                  
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        "Already have an account? ",
+                        l10n.alreadyHaveAccount,
                         style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
                       ),
                       TextButton(
                         onPressed: () => context.pop(),
-                        child: const Text(
-                          "Log In",
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                        child: Text(
+                          l10n.login,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],

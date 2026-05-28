@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:theraphy_flutter/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -21,7 +22,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -46,7 +46,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
-    final isLoading = authState.isLoading;
+    final l10n = AppLocalizations.of(context);
 
     ref.listen(authProvider, (previous, next) {
       if (next.status == AuthStatus.error && next.error != null) {
@@ -58,13 +58,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // Background Gradient
           Container(
             decoration: const BoxDecoration(
               gradient: AppColors.softBlueGradient,
             ),
           ),
-          
           SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -73,24 +71,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 children: [
                   const BackButton(),
                   const SizedBox(height: 20),
-                  
                   Text(
-                    "Welcome Back",
+                    l10n.welcomeBack,
                     style: AppTextStyles.headlineLarge.copyWith(
                       fontWeight: FontWeight.bold,
                       color: AppColors.textPrimary,
                     ),
                   ).animate().fade().slideX(begin: -0.1, end: 0),
-                  
                   const SizedBox(height: 8),
-                  
                   Text(
-                    "Sign in to continue your wellness journey.",
+                    l10n.signInToContinue,
                     style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textSecondary),
                   ).animate().fade(delay: 100.ms).slideX(begin: -0.1, end: 0),
-                  
                   const SizedBox(height: 40),
-                  
                   GlassCard(
                     padding: const EdgeInsets.all(32),
                     child: Form(
@@ -100,54 +93,53 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         children: [
                           AuthTextField(
                             controller: _emailController,
-                            hintText: "Email Address",
+                            hintText: l10n.emailAddress,
                             prefixIcon: Icons.email_outlined,
                             keyboardType: TextInputType.emailAddress,
-                            validator: (val) => val == null || !val.contains('@') ? "Enter a valid email" : null,
+                            validator: (val) => val == null || !val.contains('@')
+                                ? l10n.invalidEmail
+                                : null,
                           ),
                           const SizedBox(height: 20),
                           AuthTextField(
                             controller: _passwordController,
-                            hintText: "Password",
+                            hintText: l10n.password,
                             prefixIcon: Icons.lock_outline_rounded,
                             isPassword: true,
-                            validator: (val) => val == null || val.length < 6 ? "Password too short" : null,
+                            validator: (val) => val == null || val.length < 6
+                                ? l10n.passwordTooShort
+                                : null,
                           ),
-                          
                           Align(
                             alignment: Alignment.centerRight,
                             child: TextButton(
-                              onPressed: () => context.push('/forgot-password'),
-                              child: const Text("Forgot Password?"),
+                              onPressed: () => context.push(AppRoutes.forgotPassword),
+                              child: Text(l10n.forgotPassword),
                             ),
                           ),
-                          
                           const SizedBox(height: 24),
-                          
                           AuthButton(
-                            text: "Log In",
+                            text: l10n.login,
                             onPressed: _handleLogin,
-                            isLoading: _isLoading,
+                            isLoading: authState.isLoading,
                           ),
                         ],
                       ),
                     ),
                   ).animate().fade(delay: 200.ms).scale(duration: 500.ms, curve: Curves.easeOutBack),
-                  
                   const SizedBox(height: 32),
-                  
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        "Don't have an account? ",
+                        l10n.dontHaveAccount,
                         style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
                       ),
                       TextButton(
                         onPressed: () => context.push(AppRoutes.register),
-                        child: const Text(
-                          "Sign Up",
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                        child: Text(
+                          l10n.signUp,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],

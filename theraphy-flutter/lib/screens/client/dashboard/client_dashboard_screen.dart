@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:theraphy_flutter/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:animations/animations.dart';
@@ -7,6 +8,7 @@ import '../../../core/constants/app_text_styles.dart';
 import 'package:theraphy_flutter/features/auth/presentation/providers/auth_provider.dart';
 import 'package:theraphy_flutter/features/mood/presentation/providers/mood_provider.dart';
 import 'package:theraphy_flutter/features/appointments/presentation/providers/session_provider.dart';
+import '../../../providers/notification_provider.dart';
 import '../../../routes/app_routes.dart';
 import '../../../widgets/app_card.dart';
 import 'widgets/welcome_header.dart';
@@ -38,6 +40,8 @@ class _ClientDashboardScreenState extends ConsumerState<ClientDashboardScreen> {
     final user = ref.watch(currentUserProvider);
     final moodState = ref.watch(moodProvider);
     final sessionState = ref.watch(sessionProvider);
+    final notificationState = ref.watch(notificationProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -46,31 +50,27 @@ class _ClientDashboardScreenState extends ConsumerState<ClientDashboardScreen> {
           onRefresh: () async {
             await ref.read(moodProvider.notifier).fetchMoods();
             await ref.read(sessionProvider.notifier).fetchSessions();
+            await ref.read(notificationProvider.notifier).fetchNotifications();
           },
           child: CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
-              // Welcome Header
               SliverToBoxAdapter(
                 child: WelcomeHeader(
                   userName: user?.name.split(" ").first ?? "there",
                   onNotificationTap: () {
-                    // Open notifications
+                    context.push(AppRoutes.notifications);
                   },
+                  unreadCount: notificationState.unreadCount,
                 ),
               ),
-
-              // Motivation Quote
-              const SliverToBoxAdapter(
+              SliverToBoxAdapter(
                 child: MotivationQuoteCard(
-                  quote: "Every step forward, no matter how small, is progress toward your healing.",
-                  author: "Theraphy Team",
+                  quote: l10n.motivationQuote,
+                  author: l10n.motivationAuthor,
                 ),
               ),
-
               const SliverToBoxAdapter(child: SizedBox(height: 24)),
-
-              // Mood Tracker
               SliverToBoxAdapter(
                 child: MoodTrackerCard(
                   onMoodSelected: (score) {
@@ -78,14 +78,8 @@ class _ClientDashboardScreenState extends ConsumerState<ClientDashboardScreen> {
                   },
                 ),
               ),
-
               const SliverToBoxAdapter(child: SizedBox(height: 24)),
-
-              // Anxiety Chart
-              const SliverToBoxAdapter(
-                child: AnxietyChartCard(),
-              ),
-
+              const SliverToBoxAdapter(child: AnxietyChartCard()),
               const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
               // Upcoming Session
@@ -95,24 +89,27 @@ class _ClientDashboardScreenState extends ConsumerState<ClientDashboardScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Next Session', style: AppTextStyles.titleMedium),
+                      Text(l10n.nextSession, style: AppTextStyles.titleMedium),
                       const SizedBox(height: 12),
                       if (sessionState.isLoading)
                         const _LoadingPlaceholder()
                       else if (sessionState.upcoming.isEmpty)
                         _EmptyActionCard(
                           icon: Icons.calendar_today_rounded,
-                          message: 'No sessions scheduled',
-                          buttonLabel: 'Book Session',
+                          message: l10n.noSessionsScheduled,
+                          buttonLabel: l10n.bookSession,
+                          scheduleText: l10n.scheduleNextSession,
                           onTap: () => context.push(AppRoutes.sessions),
                         )
                       else
-                        _UpcomingSessionCard(session: sessionState.upcoming.first),
+                        _UpcomingSessionCard(
+                          session: sessionState.upcoming.first,
+                          joinLabel: l10n.join,
+                        ),
                     ],
                   ),
                 ),
               ),
-
               const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
               // Quick Actions
@@ -120,31 +117,31 @@ class _ClientDashboardScreenState extends ConsumerState<ClientDashboardScreen> {
                 child: QuickActionsGrid(
                   items: [
                     QuickActionItem(
-                      label: 'Breathing',
+                      label: l10n.breathing,
                       icon: Icons.air_rounded,
                       color: AppColors.primary,
                       onTap: () => context.push(AppRoutes.breathingExercise),
                     ),
                     QuickActionItem(
-                      label: 'CBT',
+                      label: l10n.cbt,
                       icon: Icons.psychology_rounded,
                       color: AppColors.secondary,
                       onTap: () => context.push(AppRoutes.cbtExercises),
                     ),
                     QuickActionItem(
-                      label: 'Exposure',
+                      label: l10n.exposure,
                       icon: Icons.record_voice_over_rounded,
                       color: AppColors.accent,
                       onTap: () => context.push(AppRoutes.exposure),
                     ),
                     QuickActionItem(
-                      label: 'Assess',
+                      label: l10n.assess,
                       icon: Icons.assignment_rounded,
                       color: AppColors.success,
                       onTap: () => context.push(AppRoutes.assessmentQuestionnaire),
                     ),
                     QuickActionItem(
-                      label: 'AI Chat',
+                      label: l10n.aiChat,
                       icon: Icons.smart_toy_rounded,
                       color: Colors.deepPurpleAccent,
                       onTap: () => context.push(AppRoutes.aiChat),
@@ -152,26 +149,25 @@ class _ClientDashboardScreenState extends ConsumerState<ClientDashboardScreen> {
                   ],
                 ),
               ),
-
               const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
               // CBT Exercises
               SliverToBoxAdapter(
                 child: ActivityCarousel(
-                  title: 'CBT Exercises',
+                  title: l10n.cbtExercises,
                   onSeeAll: () => context.push(AppRoutes.cbtExercises),
                   activities: [
                     ActivityItem(
-                      title: 'Thought Record',
-                      subtitle: 'Challenge your thoughts',
+                      title: l10n.thoughtRecord,
+                      subtitle: l10n.thoughtRecordSubtitle,
                       progress: 0.6,
                       icon: Icons.edit_note_rounded,
                       color: AppColors.primary,
                       onTap: () {},
                     ),
                     ActivityItem(
-                      title: 'Mindful Breathing',
-                      subtitle: 'Guided relaxation',
+                      title: l10n.mindfulBreathing,
+                      subtitle: l10n.mindfulBreathingSubtitle,
                       progress: 0.3,
                       icon: Icons.air_rounded,
                       color: AppColors.secondary,
@@ -180,26 +176,25 @@ class _ClientDashboardScreenState extends ConsumerState<ClientDashboardScreen> {
                   ],
                 ),
               ),
-
               const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
               // Exposure Tasks
               SliverToBoxAdapter(
                 child: ActivityCarousel(
-                  title: 'Exposure Therapy',
+                  title: l10n.exposureTherapy,
                   onSeeAll: () => context.push(AppRoutes.exposure),
                   activities: [
                     ActivityItem(
-                      title: 'Public Speaking',
-                      subtitle: 'Level 4 Exposure',
+                      title: l10n.publicSpeaking,
+                      subtitle: l10n.publicSpeakingSubtitle,
                       progress: 0.4,
                       icon: Icons.record_voice_over_rounded,
                       color: AppColors.accent,
                       onTap: () => context.push(AppRoutes.exposure),
                     ),
                     ActivityItem(
-                      title: 'Social Greeting',
-                      subtitle: 'Level 2 Exposure',
+                      title: l10n.socialGreeting,
+                      subtitle: l10n.socialGreetingSubtitle,
                       progress: 0.8,
                       icon: Icons.people_rounded,
                       color: AppColors.success,
@@ -208,7 +203,6 @@ class _ClientDashboardScreenState extends ConsumerState<ClientDashboardScreen> {
                   ],
                 ),
               ),
-
               const SliverToBoxAdapter(child: SizedBox(height: 40)),
             ],
           ),
@@ -220,7 +214,8 @@ class _ClientDashboardScreenState extends ConsumerState<ClientDashboardScreen> {
 
 class _UpcomingSessionCard extends StatelessWidget {
   final dynamic session;
-  const _UpcomingSessionCard({required this.session});
+  final String joinLabel;
+  const _UpcomingSessionCard({required this.session, required this.joinLabel});
 
   @override
   Widget build(BuildContext context) {
@@ -234,11 +229,7 @@ class _UpcomingSessionCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.video_camera_front_rounded,
-            color: AppColors.primary,
-            size: 22,
-          ),
+          const Icon(Icons.video_camera_front_rounded, color: AppColors.primary, size: 22),
           const SizedBox(width: 12),
           Expanded(
             child: Row(
@@ -277,9 +268,9 @@ class _UpcomingSessionCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 14),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text(
-              'Join',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            child: Text(
+              joinLabel,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -292,12 +283,14 @@ class _EmptyActionCard extends StatelessWidget {
   final IconData icon;
   final String message;
   final String buttonLabel;
+  final String scheduleText;
   final VoidCallback onTap;
 
   const _EmptyActionCard({
     required this.icon,
     required this.message,
     required this.buttonLabel,
+    required this.scheduleText,
     required this.onTap,
   });
 
@@ -326,7 +319,7 @@ class _EmptyActionCard extends StatelessWidget {
           Text(message, style: AppTextStyles.titleMedium),
           const SizedBox(height: 6),
           Text(
-            'Schedule your next therapy session to stay on track.',
+            scheduleText,
             style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
             textAlign: TextAlign.center,
           ),

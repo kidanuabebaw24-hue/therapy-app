@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:theraphy_flutter/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
@@ -39,6 +40,7 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
   }
 
   Future<void> _submit() async {
+    final l10n = AppLocalizations.of(context);
     try {
       await ref.read(moodProvider.notifier).logMood(
             moodScore: _moodScore,
@@ -47,7 +49,7 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
             notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
           );
       if (mounted) {
-        SnackbarUtils.showSuccess(context, 'Mood logged successfully');
+        SnackbarUtils.showSuccess(context, l10n.moodLoggedSuccess);
         setState(() {
           _moodScore = 5;
           _anxietyLevel = 5;
@@ -60,12 +62,27 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
     }
   }
 
+  List<String> _getLocalizedEmotions(AppLocalizations l10n) => [
+    l10n.emotionCalm,
+    l10n.emotionHappy,
+    l10n.emotionAnxious,
+    l10n.emotionSad,
+    l10n.emotionAngry,
+    l10n.emotionHopeful,
+    l10n.emotionTired,
+    l10n.emotionStressed,
+    l10n.emotionGrateful,
+    l10n.emotionOverwhelmed,
+  ];
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(moodProvider);
+    final l10n = AppLocalizations.of(context);
+    final localizedEmotions = _getLocalizedEmotions(l10n);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Mood Tracking')),
+      appBar: AppBar(title: Text(l10n.moodTracking)),
       body: LoadingOverlay(
         isLoading: state.isSubmitting,
         child: SingleChildScrollView(
@@ -78,71 +95,73 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('How are you feeling?',
+                    Text(l10n.howAreYouFeelingNow,
                         style: AppTextStyles.headlineMedium),
                     const SizedBox(height: 24),
 
                     // Mood Score
                     _SliderSection(
-                      label: 'Mood',
+                      label: l10n.mood,
                       value: _moodScore,
                       color: AppColors.accent,
-                      lowLabel: 'Very Low',
-                      highLabel: 'Excellent',
+                      lowLabel: l10n.veryLow,
+                      highLabel: l10n.excellent,
                       onChanged: (v) => setState(() => _moodScore = v),
                     ),
                     const SizedBox(height: 20),
 
                     // Anxiety Level
                     _SliderSection(
-                      label: 'Anxiety Level',
+                      label: l10n.anxietyLevel,
                       value: _anxietyLevel,
                       color: AppColors.anxietyColor(_anxietyLevel),
-                      lowLabel: 'None',
-                      highLabel: 'Severe',
+                      lowLabel: l10n.none,
+                      highLabel: l10n.severe,
                       onChanged: (v) => setState(() => _anxietyLevel = v),
                     ),
                     const SizedBox(height: 24),
 
                     // Emotions
-                    const Text('Emotions', style: AppTextStyles.titleLarge),
+                    Text(l10n.emotions, style: AppTextStyles.titleLarge),
                     const SizedBox(height: 10),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: _emotions.map((e) {
-                        final selected = _selectedEmotions.contains(e);
+                      children: List.generate(localizedEmotions.length, (i) {
+                        final label = localizedEmotions[i];
+                        final rawKey = _emotions[i];
+                        final selected = _selectedEmotions.contains(rawKey);
                         return FilterChip(
-                          label: Text(e),
+                          label: Text(label),
                           selected: selected,
                           onSelected: (v) {
                             setState(() {
                               if (v) {
-                                _selectedEmotions.add(e);
+                                _selectedEmotions.add(rawKey);
                               } else {
-                                _selectedEmotions.remove(e);
+                                _selectedEmotions.remove(rawKey);
                               }
                             });
                           },
                         );
-                      }).toList(),
+                      }),
                     ),
                     const SizedBox(height: 20),
 
                     // Notes
-                    const Text('Notes (optional)', style: AppTextStyles.titleLarge),
+                    Text(l10n.notesOptional, style: AppTextStyles.titleLarge),
                     const SizedBox(height: 8),
                     TextField(
                       controller: _notesCtrl,
                       maxLines: 3,
-                      decoration: const InputDecoration(
-                        hintText: 'How was your day? Any triggers?',
+                      decoration: InputDecoration(
+                        hintText: l10n.notesHint,
                       ),
                     ),
                     const SizedBox(height: 24),
 
                     AppButton(
-                      label: 'Log Mood',
+                      label: l10n.logMood,
                       onPressed: _submit,
                       isLoading: state.isSubmitting,
                       icon: Icons.check,
@@ -153,15 +172,15 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
               const SizedBox(height: 28),
 
               // History
-              const Text('Recent Entries', style: AppTextStyles.headlineMedium),
+              Text(l10n.recentEntries, style: AppTextStyles.headlineMedium),
               const SizedBox(height: 12),
               if (state.isLoading)
                 const Center(child: CircularProgressIndicator())
               else if (state.moods.isEmpty)
-                const Center(
+                Center(
                   child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Text('No mood entries yet',
+                    padding: const EdgeInsets.all(24),
+                    child: Text(l10n.noMoodEntries,
                         style: AppTextStyles.bodyMedium),
                   ),
                 )
@@ -200,7 +219,7 @@ class _MoodTrackingScreenState extends ConsumerState<MoodTrackingScreen> {
                                     Text(m.emotions.join(', '),
                                         style: AppTextStyles.titleMedium),
                                   Text(
-                                    'Anxiety: ${m.anxietyLevel}/10',
+                                    '${l10n.anxietyLevel}: ${m.anxietyLevel}/10',
                                     style: AppTextStyles.bodySmall,
                                   ),
                                 ],

@@ -298,17 +298,8 @@ const Register = () => {
           role: 'client',
           age: parseInt(formData.age),
           gender: formData.gender,
-          emergencyContact: {
-            name: formData.emergencyContactName,
-            phone: formData.emergencyContactPhone
-          },
           primaryPhobia: formData.primaryPhobia,
           currentAnxietyLevel: calculatedAnxietyLevel,
-          anxietyAssessment: {
-            answers: formData.anxietyAnswers,
-            calculatedScore: calculatedAnxietyLevel,
-            completedAt: new Date()
-          }
         };
       } else {
         // Therapist registration (with working hours)
@@ -338,7 +329,7 @@ const Register = () => {
         
         if (response.token) {
           localStorage.setItem('token', response.token);
-          localStorage.setItem('user', JSON.stringify(response));
+          localStorage.setItem('user', JSON.stringify(response.user));
         }
         navigate('/cbt-exercises');
       }

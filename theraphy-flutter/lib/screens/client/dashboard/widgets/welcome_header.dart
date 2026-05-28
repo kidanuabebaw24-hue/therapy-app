@@ -7,12 +7,14 @@ class WelcomeHeader extends StatelessWidget {
   final String userName;
   final VoidCallback onNotificationTap;
   final String? avatarUrl;
+  final int unreadCount;
 
   const WelcomeHeader({
     super.key,
     required this.userName,
     required this.onNotificationTap,
     this.avatarUrl,
+    this.unreadCount = 0,
   });
 
   @override
@@ -97,19 +99,20 @@ class WelcomeHeader extends StatelessWidget {
                       color: AppColors.textPrimary,
                       size: 24,
                     ),
-                    Positioned(
-                      right: 2,
-                      top: 2,
-                      child: Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: AppColors.error,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 1.5),
+                    if (unreadCount > 0)
+                      Positioned(
+                        right: 2,
+                        top: 2,
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: AppColors.error,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 1.5),
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),

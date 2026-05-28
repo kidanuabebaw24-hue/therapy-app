@@ -15,16 +15,19 @@ class TherapistProfileScreen extends ConsumerStatefulWidget {
   const TherapistProfileScreen({super.key, required this.therapist});
 
   @override
-  ConsumerState<TherapistProfileScreen> createState() => _TherapistProfileScreenState();
+  ConsumerState<TherapistProfileScreen> createState() =>
+      _TherapistProfileScreenState();
 }
 
-class _TherapistProfileScreenState extends ConsumerState<TherapistProfileScreen> {
+class _TherapistProfileScreenState
+    extends ConsumerState<TherapistProfileScreen> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
   String? _selectedSlot;
 
   @override
   Widget build(BuildContext context) {
+    final paymentState = ref.watch(paymentProvider);
     return Scaffold(
       backgroundColor: AppColors.background,
       body: CustomScrollView(
@@ -50,27 +53,35 @@ class _TherapistProfileScreenState extends ConsumerState<TherapistProfileScreen>
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(widget.therapist.name, style: AppTextStyles.displayMedium),
-                          Text(widget.therapist.specialization, style: AppTextStyles.bodyLarge.copyWith(color: AppColors.primary)),
+                          Text(widget.therapist.name,
+                              style: AppTextStyles.displayMedium),
+                          Text(widget.therapist.specialization,
+                              style: AppTextStyles.bodyLarge
+                                  .copyWith(color: AppColors.primary)),
                         ],
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
+                          color: AppColors.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Text('\$${widget.therapist.hourlyRate}/hr', style: AppTextStyles.titleMedium.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                        child: Text('\$${widget.therapist.hourlyRate}/hr',
+                            style: AppTextStyles.titleMedium.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ),
                   const SizedBox(height: 24),
                   const Text('About', style: AppTextStyles.headlineMedium),
                   const SizedBox(height: 8),
-                  Text(widget.therapist.bio, style: AppTextStyles.bodyMedium.copyWith(height: 1.6)),
-                  
+                  Text(widget.therapist.bio,
+                      style: AppTextStyles.bodyMedium.copyWith(height: 1.6)),
                   const SizedBox(height: 32),
-                  const Text('Select Date', style: AppTextStyles.headlineMedium),
+                  const Text('Select Date',
+                      style: AppTextStyles.headlineMedium),
                   const SizedBox(height: 16),
                   Container(
                     decoration: BoxDecoration(
@@ -82,7 +93,8 @@ class _TherapistProfileScreenState extends ConsumerState<TherapistProfileScreen>
                       firstDay: DateTime.now(),
                       lastDay: DateTime.now().add(const Duration(days: 30)),
                       focusedDay: _focusedDay,
-                      selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                      selectedDayPredicate: (day) =>
+                          isSameDay(_selectedDay, day),
                       onDaySelected: (selectedDay, focusedDay) {
                         setState(() {
                           _selectedDay = selectedDay;
@@ -94,14 +106,17 @@ class _TherapistProfileScreenState extends ConsumerState<TherapistProfileScreen>
                         titleCentered: true,
                       ),
                       calendarStyle: const CalendarStyle(
-                        selectedDecoration: BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
-                        todayDecoration: BoxDecoration(color: AppColors.primaryContainer, shape: BoxShape.circle),
+                        selectedDecoration: BoxDecoration(
+                            color: AppColors.primary, shape: BoxShape.circle),
+                        todayDecoration: BoxDecoration(
+                            color: AppColors.primaryContainer,
+                            shape: BoxShape.circle),
                       ),
                     ),
                   ),
-                  
                   const SizedBox(height: 32),
-                  const Text('Available Slots', style: AppTextStyles.headlineMedium),
+                  const Text('Available Slots',
+                      style: AppTextStyles.headlineMedium),
                   const SizedBox(height: 16),
                   Wrap(
                     spacing: 12,
@@ -111,26 +126,90 @@ class _TherapistProfileScreenState extends ConsumerState<TherapistProfileScreen>
                       return ChoiceChip(
                         label: Text(slot),
                         selected: isSelected,
-                        onSelected: (selected) => setState(() => _selectedSlot = selected ? slot : null),
-                        selectedColor: AppColors.primary.withOpacity(0.2),
-                        labelStyle: TextStyle(color: isSelected ? AppColors.primary : AppColors.textPrimary, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal),
+                        onSelected: (selected) => setState(
+                            () => _selectedSlot = selected ? slot : null),
+                        selectedColor: AppColors.primary.withValues(alpha: 0.2),
+                        labelStyle: TextStyle(
+                            color: isSelected
+                                ? AppColors.primary
+                                : AppColors.textPrimary,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal),
                       );
                     }).toList(),
                   ),
-                  
+                  if (paymentState.availabilityMessage != null) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: paymentState.isAvailable
+                            ? Colors.green.withValues(alpha: 0.08)
+                            : Colors.redAccent.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: paymentState.isAvailable
+                              ? Colors.green.withValues(alpha: 0.35)
+                              : Colors.redAccent.withValues(alpha: 0.35),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            paymentState.isAvailable
+                                ? Icons.check_circle
+                                : Icons.warning_amber_rounded,
+                            color: paymentState.isAvailable
+                                ? Colors.green
+                                : Colors.redAccent,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              paymentState.availabilityMessage!,
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: paymentState.isAvailable
+                                    ? Colors.green.shade800
+                                    : Colors.redAccent.shade700,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 40),
                   AppButton(
                     label: 'Book Appointment',
-                    onPressed: (_selectedDay != null && _selectedSlot != null) 
-                      ? () {
-                          ref.read(paymentProvider.notifier).initiateBooking(
-                            therapist: widget.therapist,
-                            date: _selectedDay!,
-                            timeSlot: _selectedSlot!,
-                          );
-                          context.push('/booking/summary');
-                        }
-                      : null,
+                    isLoading: paymentState.isCheckingAvailability,
+                    onPressed: (_selectedDay != null &&
+                            _selectedSlot != null &&
+                            !paymentState.isCheckingAvailability)
+                        ? () async {
+                            final isAvailable = await ref
+                                .read(paymentProvider.notifier)
+                                .checkTherapistAvailability(
+                                  therapistId: widget.therapist.id,
+                                  date: _selectedDay!,
+                                  timeSlot: _selectedSlot!,
+                                );
+
+                            if (!context.mounted) return;
+
+                            if (!isAvailable) return;
+
+                            ref.read(paymentProvider.notifier).initiateBooking(
+                                  therapist: widget.therapist,
+                                  date: _selectedDay!,
+                                  timeSlot: _selectedSlot!,
+                                );
+                            context.push('/booking/summary');
+                          }
+                        : null,
                   ),
                   const SizedBox(height: 40),
                 ],

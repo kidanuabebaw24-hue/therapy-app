@@ -23,10 +23,21 @@ class BookingConfirmationScreen extends ConsumerWidget {
       );
     }
 
-    final formattedDate = DateFormat('EEEE, MMMM d, yyyy').format(booking.appointmentDate);
-    final bookingRefId = booking.transactionId.isNotEmpty 
+    final formattedDate =
+        DateFormat('EEEE, MMMM d, yyyy').format(booking.appointmentDate);
+    final bookingRefId = booking.transactionId.isNotEmpty
         ? 'REF-${booking.transactionId.substring(booking.transactionId.length - 8).toUpperCase()}'
         : 'REF-BOOKING-001';
+    final isPendingAdminApproval =
+        booking.bookingStatus == 'pending_admin_approval';
+    final statusLabel =
+        isPendingAdminApproval ? 'PENDING ADMIN APPROVAL' : 'CONFIRMED';
+    final titleLabel = isPendingAdminApproval
+        ? 'Appointment Request Submitted'
+        : 'Appointment Confirmed';
+    final subtitleLabel = isPendingAdminApproval
+        ? 'Your booking request has been sent for admin approval. You will be notified once it is approved or rejected.'
+        : 'Your therapy session has been successfully booked. Let\'s make this a positive step forward.';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -53,7 +64,7 @@ class BookingConfirmationScreen extends ConsumerWidget {
                   width: 90,
                   height: 90,
                   decoration: BoxDecoration(
-                    color: AppColors.success.withOpacity(0.12),
+                    color: AppColors.success.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
                   child: const Center(
@@ -68,14 +79,16 @@ class BookingConfirmationScreen extends ConsumerWidget {
               const SizedBox(height: 24),
 
               Text(
-                'Appointment Confirmed',
-                style: AppTextStyles.displaySmall.copyWith(fontWeight: FontWeight.bold),
+                titleLabel,
+                style: AppTextStyles.displaySmall
+                    .copyWith(fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
               Text(
-                'Your therapy session has been successfully booked. Let\'s make this a positive step forward.',
-                style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textSecondary),
+                subtitleLabel,
+                style: AppTextStyles.bodyLarge
+                    .copyWith(color: AppColors.textSecondary),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 40),
@@ -93,11 +106,14 @@ class BookingConfirmationScreen extends ConsumerWidget {
                     // Therapist Header
                     Row(
                       children: [
-                        const Icon(Icons.person_pin_rounded, color: AppColors.primary, size: 24),
+                        const Icon(Icons.person_pin_rounded,
+                            color: AppColors.primary, size: 24),
                         const SizedBox(width: 8),
                         Text(
                           'Therapist Info',
-                          style: AppTextStyles.labelMedium.copyWith(color: AppColors.textHint, fontWeight: FontWeight.bold),
+                          style: AppTextStyles.labelMedium.copyWith(
+                              color: AppColors.textHint,
+                              fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -108,8 +124,12 @@ class BookingConfirmationScreen extends ConsumerWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(booking.therapistName, style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.bold)),
-                              Text(booking.therapistSpecialization, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.primary)),
+                              Text(booking.therapistName,
+                                  style: AppTextStyles.titleMedium
+                                      .copyWith(fontWeight: FontWeight.bold)),
+                              Text(booking.therapistSpecialization,
+                                  style: AppTextStyles.bodyMedium
+                                      .copyWith(color: AppColors.primary)),
                             ],
                           ),
                         ),
@@ -121,22 +141,28 @@ class BookingConfirmationScreen extends ConsumerWidget {
                     ),
 
                     // Date & Time Details
-                    _buildReceiptRow(Icons.calendar_month_rounded, 'Date', formattedDate),
+                    _buildReceiptRow(
+                        Icons.calendar_month_rounded, 'Date', formattedDate),
                     const SizedBox(height: 14),
-                    _buildReceiptRow(Icons.access_time_filled_rounded, 'Time', booking.appointmentTime),
+                    _buildReceiptRow(Icons.access_time_filled_rounded, 'Time',
+                        booking.appointmentTime),
                     const SizedBox(height: 14),
-                    _buildReceiptRow(Icons.hourglass_bottom_rounded, 'Session Length', '50-min Consultation'),
+                    _buildReceiptRow(Icons.hourglass_bottom_rounded,
+                        'Session Length', '50-min Consultation'),
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 16.0),
                       child: Divider(height: 1),
                     ),
 
                     // Payment Receipt details
-                    _buildReceiptRow(Icons.account_balance_wallet_rounded, 'Payment Method', booking.paymentMethod.toUpperCase()),
+                    _buildReceiptRow(Icons.account_balance_wallet_rounded,
+                        'Payment Method', booking.paymentMethod.toUpperCase()),
                     const SizedBox(height: 14),
-                    _buildReceiptRow(Icons.payments_rounded, 'Status', 'PAID'),
+                    _buildReceiptRow(
+                        Icons.payments_rounded, 'Status', statusLabel),
                     const SizedBox(height: 14),
-                    _buildReceiptRow(Icons.receipt_long_rounded, 'Booking Ref', bookingRefId),
+                    _buildReceiptRow(Icons.receipt_long_rounded, 'Booking Ref',
+                        bookingRefId),
                   ],
                 ),
               ),
@@ -162,11 +188,14 @@ class BookingConfirmationScreen extends ConsumerWidget {
       children: [
         Icon(icon, color: AppColors.textHint, size: 20),
         const SizedBox(width: 12),
-        Text(label, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
+        Text(label,
+            style: AppTextStyles.bodyMedium
+                .copyWith(color: AppColors.textSecondary)),
         const Spacer(),
         Text(
           value,
-          style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+          style: AppTextStyles.bodyMedium.copyWith(
+              fontWeight: FontWeight.bold, color: AppColors.textPrimary),
         ),
       ],
     );

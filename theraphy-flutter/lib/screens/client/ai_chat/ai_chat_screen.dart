@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:theraphy_flutter/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
@@ -6,7 +7,6 @@ import '../../../core/constants/app_text_styles.dart';
 import '../../../providers/ai_chat_provider.dart';
 import '../../../utils/snackbar_utils.dart';
 import '../../../widgets/app_card.dart';
-import '../../../widgets/loading_overlay.dart';
 import '../../../routes/app_routes.dart';
 
 class AiChatScreen extends ConsumerStatefulWidget {
@@ -53,9 +53,10 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(aiChatProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('AI Support Chat')),
+      appBar: AppBar(title: Text(l10n.aiSupportChat)),
       body: Column(
         children: [
           // Header banner
@@ -66,27 +67,27 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
               gradient: AppColors.calmGradient,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(Icons.smart_toy, color: Colors.white, size: 32),
-                SizedBox(width: 12),
+                const Icon(Icons.smart_toy, color: Colors.white, size: 32),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'AI Mental Health Assistant',
-                        style: TextStyle(
+                        l10n.aiAssistantName,
+                        style: const TextStyle(
                           fontFamily: 'Outfit',
                           color: Colors.white,
                           fontWeight: FontWeight.w700,
                           fontSize: 15,
                         ),
                       ),
-                      SizedBox(height: 2),
+                      const SizedBox(height: 2),
                       Text(
-                        'Available 24/7 · Confidential · Supportive',
-                        style: TextStyle(
+                        l10n.aiAssistantSubtitle,
+                        style: const TextStyle(
                           fontFamily: 'Outfit',
                           color: Colors.white70,
                           fontSize: 12,
@@ -167,8 +168,8 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                   child: TextField(
                     controller: _msgCtrl,
                     focusNode: _inputFocus,
-                    decoration: const InputDecoration(
-                      hintText: 'Start a new conversation...',
+                    decoration: InputDecoration(
+                      hintText: l10n.startNewConversation,
                     ),
                     onSubmitted: (_) => _startConversation(),
                   ),
@@ -211,11 +212,12 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final starters = [
-      'Help with anxiety',
-      'I can\'t sleep',
-      'Feeling overwhelmed',
-      'Quick breathing exercise',
+      l10n.starterHelpAnxiety,
+      l10n.starterCantSleep,
+      l10n.starterFeelOverwhelmed,
+      l10n.starterBreathing,
     ];
 
     return SingleChildScrollView(
@@ -227,11 +229,11 @@ class _EmptyState extends StatelessWidget {
             const Icon(Icons.smart_toy_outlined,
                 size: 64, color: AppColors.textHint),
             const SizedBox(height: 16),
-            const Text('No conversations yet',
+            Text(l10n.noConversationsYet,
                 style: AppTextStyles.headlineMedium),
             const SizedBox(height: 8),
-            const Text(
-              'Start a conversation with your AI mental health assistant. It\'s confidential and available anytime.',
+            Text(
+              l10n.noConversationsSubtitle,
               style: AppTextStyles.bodyMedium,
               textAlign: TextAlign.center,
             ),

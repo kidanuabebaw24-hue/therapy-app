@@ -1,0 +1,498 @@
+{
+  "@@locale": "en",
+
+  "appName": "Theraphy",
+  "@appName": { "description": "Application name" },
+
+  "appTagline": "Treating Anxiety & Phobias",
+  "@appTagline": { "description": "App tagline" },
+
+  "language": "Language",
+  "@language": { "description": "Language label" },
+
+  "english": "English",
+  "@english": { "description": "English language name" },
+
+  "amharic": "አማርኛ",
+  "@amharic": { "description": "Amharic language name" },
+
+  "selectLanguage": "Select Language",
+  "@selectLanguage": { "description": "Language selection screen title" },
+
+  "languageChanged": "Language updated",
+  "@languageChanged": { "description": "Snackbar when language changes" },
+
+  "login": "Log In",
+  "@login": { "description": "Login button label" },
+
+  "signUp": "Sign Up",
+  "@signUp": { "description": "Sign up button label" },
+
+  "signOut": "Sign Out",
+  "@signOut": { "description": "Sign out button label" },
+
+  "signOutConfirmTitle": "Sign Out",
+  "@signOutConfirmTitle": { "description": "Sign out confirmation dialog title" },
+
+  "signOutConfirmMessage": "Are you sure you want to sign out?",
+  "@signOutConfirmMessage": { "description": "Sign out confirmation message" },
+
+  "createAccount": "Create Account",
+  "@createAccount": { "description": "Create account button label" },
+
+  "welcomeBack": "Welcome Back",
+  "@welcomeBack": { "description": "Login screen headline" },
+
+  "signInToContinue": "Sign in to continue your wellness journey.",
+  "@signInToContinue": { "description": "Login screen subtitle" },
+
+  "joinUs": "Join Us",
+  "@joinUs": { "description": "Register screen headline" },
+
+  "startYourPath": "Start your path to tranquility today.",
+  "@startYourPath": { "description": "Register screen subtitle" },
+
+  "takeADeepBreath": "Take a Deep Breath",
+  "@takeADeepBreath": { "description": "Welcome screen headline" },
+
+  "welcomeSubtitle": "Your journey to a calmer, fear-free life starts here. We're with you every step of the way.",
+  "@welcomeSubtitle": { "description": "Welcome screen subtitle" },
+
+  "emailAddress": "Email Address",
+  "@emailAddress": { "description": "Email field hint" },
+
+  "password": "Password",
+  "@password": { "description": "Password field hint" },
+
+  "fullName": "Full Name",
+  "@fullName": { "description": "Full name field hint" },
+
+  "forgotPassword": "Forgot Password?",
+  "@forgotPassword": { "description": "Forgot password link" },
+
+  "alreadyHaveAccount": "Already have an account? ",
+  "@alreadyHaveAccount": { "description": "Already have account text" },
+
+  "dontHaveAccount": "Don't have an account? ",
+  "@dontHaveAccount": { "description": "Don't have account text" },
+
+  "termsNotice": "By signing up, you agree to our Terms of Service and Privacy Policy.",
+  "@termsNotice": { "description": "Terms notice on register screen" },
+
+  "invalidEmail": "Enter a valid email",
+  "@invalidEmail": { "description": "Invalid email validation message" },
+
+  "passwordTooShort": "Password too short",
+  "@passwordTooShort": { "description": "Password too short validation message" },
+
+  "passwordMinLength": "Password must be at least 6 characters",
+  "@passwordMinLength": { "description": "Password minimum length message" },
+
+  "enterYourName": "Enter your name",
+  "@enterYourName": { "description": "Name required validation message" },
+
+  "required": "Required",
+  "@required": { "description": "Required field validation message" },
+
+  "networkError": "Network error. Please check your connection.",
+  "@networkError": { "description": "Network error message" },
+
+  "tryAgain": "Try Again",
+  "@tryAgain": { "description": "Try again button label" },
+
+  "cancel": "Cancel",
+  "@cancel": { "description": "Cancel button label" },
+
+  "save": "Save",
+  "@save": { "description": "Save button label" },
+
+  "edit": "Edit",
+  "@edit": { "description": "Edit button label" },
+
+  "delete": "Delete",
+  "@delete": { "description": "Delete button label" },
+
+  "confirm": "Confirm",
+  "@confirm": { "description": "Confirm button label" },
+
+  "close": "Close",
+  "@close": { "description": "Close button label" },
+
+  "home": "Home",
+  "@home": { "description": "Home nav label" },
+
+  "therapy": "Therapy",
+  "@therapy": { "description": "Therapy nav label" },
+
+  "support": "Support",
+  "@support": { "description": "Support nav label" },
+
+  "progress": "Progress",
+  "@progress": { "description": "Progress nav label" },
+
+  "profile": "Profile",
+  "@profile": { "description": "Profile nav label" },
+
+  "goodMorning": "Good morning",
+  "@goodMorning": { "description": "Good morning greeting" },
+
+  "goodAfternoon": "Good afternoon",
+  "@goodAfternoon": { "description": "Good afternoon greeting" },
+
+  "goodEvening": "Good evening",
+  "@goodEvening": { "description": "Good evening greeting" },
+
+  "howAreYouFeeling": "How are you feeling today?",
+  "@howAreYouFeeling": { "description": "Dashboard mood prompt" },
+
+  "nextSession": "Next Session",
+  "@nextSession": { "description": "Next session section title" },
+
+  "noSessionsScheduled": "No sessions scheduled",
+  "@noSessionsScheduled": { "description": "Empty sessions message" },
+
+  "bookSession": "Book Session",
+  "@bookSession": { "description": "Book session button label" },
+
+  "scheduleNextSession": "Schedule your next therapy session to stay on track.",
+  "@scheduleNextSession": { "description": "Empty session card subtitle" },
+
+  "join": "Join",
+  "@join": { "description": "Join session button" },
+
+  "cbtExercises": "CBT Exercises",
+  "@cbtExercises": { "description": "CBT exercises section title" },
+
+  "exposureTherapy": "Exposure Therapy",
+  "@exposureTherapy": { "description": "Exposure therapy section title" },
+
+  "seeAll": "See All",
+  "@seeAll": { "description": "See all link" },
+
+  "breathing": "Breathing",
+  "@breathing": { "description": "Breathing quick action label" },
+
+  "cbt": "CBT",
+  "@cbt": { "description": "CBT quick action label" },
+
+  "exposure": "Exposure",
+  "@exposure": { "description": "Exposure quick action label" },
+
+  "assess": "Assess",
+  "@assess": { "description": "Assessment quick action label" },
+
+  "aiChat": "AI Chat",
+  "@aiChat": { "description": "AI chat quick action label" },
+
+  "moodTracking": "Mood Tracking",
+  "@moodTracking": { "description": "Mood tracking screen title" },
+
+  "howAreYouFeelingNow": "How are you feeling?",
+  "@howAreYouFeelingNow": { "description": "Mood log card title" },
+
+  "mood": "Mood",
+  "@mood": { "description": "Mood slider label" },
+
+  "anxietyLevel": "Anxiety Level",
+  "@anxietyLevel": { "description": "Anxiety level slider label" },
+
+  "emotions": "Emotions",
+  "@emotions": { "description": "Emotions section label" },
+
+  "notesOptional": "Notes (optional)",
+  "@notesOptional": { "description": "Notes field label" },
+
+  "notesHint": "How was your day? Any triggers?",
+  "@notesHint": { "description": "Notes field hint text" },
+
+  "logMood": "Log Mood",
+  "@logMood": { "description": "Log mood button label" },
+
+  "moodLoggedSuccess": "Mood logged successfully",
+  "@moodLoggedSuccess": { "description": "Mood logged success message" },
+
+  "recentEntries": "Recent Entries",
+  "@recentEntries": { "description": "Recent mood entries section title" },
+
+  "noMoodEntries": "No mood entries yet",
+  "@noMoodEntries": { "description": "Empty mood entries message" },
+
+  "veryLow": "Very Low",
+  "@veryLow": { "description": "Mood slider low label" },
+
+  "excellent": "Excellent",
+  "@excellent": { "description": "Mood slider high label" },
+
+  "none": "None",
+  "@none": { "description": "Anxiety slider low label" },
+
+  "severe": "Severe",
+  "@severe": { "description": "Anxiety slider high label" },
+
+  "emotionCalm": "Calm",
+  "@emotionCalm": {},
+  "emotionHappy": "Happy",
+  "@emotionHappy": {},
+  "emotionAnxious": "Anxious",
+  "@emotionAnxious": {},
+  "emotionSad": "Sad",
+  "@emotionSad": {},
+  "emotionAngry": "Angry",
+  "@emotionAngry": {},
+  "emotionHopeful": "Hopeful",
+  "@emotionHopeful": {},
+  "emotionTired": "Tired",
+  "@emotionTired": {},
+  "emotionStressed": "Stressed",
+  "@emotionStressed": {},
+  "emotionGrateful": "Grateful",
+  "@emotionGrateful": {},
+  "emotionOverwhelmed": "Overwhelmed",
+  "@emotionOverwhelmed": {},
+
+  "sessions": "Sessions",
+  "@sessions": { "description": "Sessions screen title" },
+
+  "upcoming": "Upcoming",
+  "@upcoming": { "description": "Upcoming sessions tab" },
+
+  "past": "Past",
+  "@past": { "description": "Past sessions tab" },
+
+  "noUpcomingSessions": "No upcoming sessions",
+  "@noUpcomingSessions": { "description": "Empty upcoming sessions message" },
+
+  "noPastSessions": "No past sessions",
+  "@noPastSessions": { "description": "Empty past sessions message" },
+
+  "bookASession": "Book a Session",
+  "@bookASession": { "description": "Book session sheet title" },
+
+  "sessionType": "Session Type",
+  "@sessionType": { "description": "Session type label" },
+
+  "duration": "Duration",
+  "@duration": { "description": "Duration label" },
+
+  "confirmBooking": "Confirm Booking",
+  "@confirmBooking": { "description": "Confirm booking button" },
+
+  "sessionBookedSuccess": "Session booked successfully",
+  "@sessionBookedSuccess": { "description": "Session booked success message" },
+
+  "bookingConfirmed": "Booking Confirmed",
+  "@bookingConfirmed": { "description": "Booking confirmed message" },
+
+  "therapist": "Therapist",
+  "@therapist": { "description": "Therapist label" },
+
+  "bookAppointment": "Book Appointment",
+  "@bookAppointment": { "description": "Book appointment button" },
+
+  "paid": "Paid",
+  "@paid": { "description": "Paid payment status" },
+
+  "pending": "Pending",
+  "@pending": { "description": "Pending payment status" },
+
+  "payNow": "Pay Now",
+  "@payNow": { "description": "Pay now button" },
+
+  "paymentSuccessful": "Payment Successful",
+  "@paymentSuccessful": { "description": "Payment success message" },
+
+  "aiSupportChat": "AI Support Chat",
+  "@aiSupportChat": { "description": "AI chat screen title" },
+
+  "aiAssistantName": "AI Mental Health Assistant",
+  "@aiAssistantName": { "description": "AI assistant name in banner" },
+
+  "aiAssistantSubtitle": "Available 24/7 · Confidential · Supportive",
+  "@aiAssistantSubtitle": { "description": "AI assistant subtitle" },
+
+  "startNewConversation": "Start a new conversation...",
+  "@startNewConversation": { "description": "AI chat input hint" },
+
+  "noConversationsYet": "No conversations yet",
+  "@noConversationsYet": { "description": "Empty AI chat state title" },
+
+  "noConversationsSubtitle": "Start a conversation with your AI mental health assistant. It's confidential and available anytime.",
+  "@noConversationsSubtitle": { "description": "Empty AI chat state subtitle" },
+
+  "starterHelpAnxiety": "Help with anxiety",
+  "@starterHelpAnxiety": {},
+  "starterCantSleep": "I can't sleep",
+  "@starterCantSleep": {},
+  "starterFeelOverwhelmed": "Feeling overwhelmed",
+  "@starterFeelOverwhelmed": {},
+  "starterBreathing": "Quick breathing exercise",
+  "@starterBreathing": {},
+
+  "emergencySupport": "Emergency Support",
+  "@emergencySupport": { "description": "Emergency screen title" },
+
+  "crisisSupport": "Crisis Support",
+  "@crisisSupport": { "description": "Crisis banner title" },
+
+  "crisisBannerMessage": "If you are in immediate danger, call emergency services (911) first. This feature alerts your therapist and support team.",
+  "@crisisBannerMessage": { "description": "Crisis banner message" },
+
+  "severityLevel": "Severity Level",
+  "@severityLevel": { "description": "Severity level section title" },
+
+  "severityLow": "Low",
+  "@severityLow": {},
+  "severityMedium": "Medium",
+  "@severityMedium": {},
+  "severityHigh": "High",
+  "@severityHigh": {},
+
+  "sendEmergencyAlert": "SEND EMERGENCY ALERT",
+  "@sendEmergencyAlert": { "description": "Emergency alert button text" },
+
+  "confirmEmergencyTitle": "Confirm Emergency Alert",
+  "@confirmEmergencyTitle": { "description": "Emergency confirm dialog title" },
+
+  "confirmEmergencyMessage": "This will notify your therapist and support team immediately. Are you sure you want to send an emergency alert?",
+  "@confirmEmergencyMessage": { "description": "Emergency confirm dialog message" },
+
+  "sendAlert": "Send Alert",
+  "@sendAlert": { "description": "Send alert button in dialog" },
+
+  "emergencyAlertSent": "Emergency alert sent. Help is on the way.",
+  "@emergencyAlertSent": { "description": "Emergency alert sent success message" },
+
+  "crisisResources": "Crisis Resources",
+  "@crisisResources": { "description": "Crisis resources section title" },
+
+  "nationalCrisisHotline": "National Crisis Hotline",
+  "@nationalCrisisHotline": {},
+  "nationalCrisisHotlineSubtitle": "Call or text 988",
+  "@nationalCrisisHotlineSubtitle": {},
+
+  "crisisTextLine": "Crisis Text Line",
+  "@crisisTextLine": {},
+  "crisisTextLineSubtitle": "Text HOME to 741741",
+  "@crisisTextLineSubtitle": {},
+
+  "emergencyServices": "Emergency Services",
+  "@emergencyServices": {},
+  "emergencyServicesSubtitle": "Call 911",
+  "@emergencyServicesSubtitle": {},
+
+  "profileTitle": "Profile",
+  "@profileTitle": { "description": "Profile screen title" },
+
+  "client": "Client",
+  "@client": { "description": "Client role badge" },
+
+  "age": "Age",
+  "@age": { "description": "Age label" },
+
+  "phone": "Phone",
+  "@phone": { "description": "Phone label" },
+
+  "gender": "Gender",
+  "@gender": { "description": "Gender label" },
+
+  "primaryConcern": "Primary Concern",
+  "@primaryConcern": { "description": "Primary concern label" },
+
+  "notSet": "Not set",
+  "@notSet": { "description": "Not set placeholder" },
+
+  "yearsOld": "{age} years",
+  "@yearsOld": {
+    "description": "Age display",
+    "placeholders": { "age": { "type": "int" } }
+  },
+
+  "anxietyLevelLabel": "Anxiety Level",
+  "@anxietyLevelLabel": { "description": "Anxiety level card title" },
+
+  "emergencyContacts": "Emergency Contacts",
+  "@emergencyContacts": { "description": "Emergency contacts section title" },
+
+  "noEmergencyContacts": "No emergency contacts added yet.",
+  "@noEmergencyContacts": { "description": "Empty emergency contacts message" },
+
+  "addContact": "Add Contact",
+  "@addContact": { "description": "Add contact sheet title" },
+
+  "editContact": "Edit Contact",
+  "@editContact": { "description": "Edit contact sheet title" },
+
+  "saveContact": "Save Contact",
+  "@saveContact": { "description": "Save contact button" },
+
+  "phoneNumber": "Phone Number",
+  "@phoneNumber": { "description": "Phone number field label" },
+
+  "relationship": "Relationship",
+  "@relationship": { "description": "Relationship field label" },
+
+  "relationshipHint": "e.g. Spouse, Parent, Friend",
+  "@relationshipHint": { "description": "Relationship field hint" },
+
+  "deleteContact": "Delete Contact",
+  "@deleteContact": { "description": "Delete contact dialog title" },
+
+  "deleteContactConfirm": "Are you sure you want to remove {name}?",
+  "@deleteContactConfirm": {
+    "description": "Delete contact confirmation message",
+    "placeholders": { "name": { "type": "String" } }
+  },
+
+  "failedToDeleteContact": "Failed to delete contact",
+  "@failedToDeleteContact": {},
+
+  "failedToSaveContact": "Failed to save contact",
+  "@failedToSaveContact": {},
+
+  "couldNotLaunchDialer": "Could not launch phone dialer",
+  "@couldNotLaunchDialer": {},
+
+  "settings": "Settings",
+  "@settings": { "description": "Settings label" },
+
+  "logout": "Logout",
+  "@logout": { "description": "Logout label" },
+
+  "anxietyProgress": "Anxiety Progress",
+  "@anxietyProgress": { "description": "Anxiety progress chart title" },
+
+  "motivationQuote": "Every step forward, no matter how small, is progress toward your healing.",
+  "@motivationQuote": { "description": "Default motivation quote" },
+
+  "motivationAuthor": "Theraphy Team",
+  "@motivationAuthor": { "description": "Motivation quote author" },
+
+  "thoughtRecord": "Thought Record",
+  "@thoughtRecord": {},
+  "thoughtRecordSubtitle": "Challenge your thoughts",
+  "@thoughtRecordSubtitle": {},
+
+  "mindfulBreathing": "Mindful Breathing",
+  "@mindfulBreathing": {},
+  "mindfulBreathingSubtitle": "Guided relaxation",
+  "@mindfulBreathingSubtitle": {},
+
+  "publicSpeaking": "Public Speaking",
+  "@publicSpeaking": {},
+  "publicSpeakingSubtitle": "Level 4 Exposure",
+  "@publicSpeakingSubtitle": {},
+
+  "socialGreeting": "Social Greeting",
+  "@socialGreeting": {},
+  "socialGreetingSubtitle": "Level 2 Exposure",
+  "@socialGreetingSubtitle": {},
+
+  "languageSettingsTitle": "Language",
+  "@languageSettingsTitle": { "description": "Language settings screen title" },
+
+  "languageSettingsSubtitle": "Choose your preferred language",
+  "@languageSettingsSubtitle": { "description": "Language settings subtitle" },
+
+  "currentLanguage": "Current Language",
+  "@currentLanguage": { "description": "Current language label" }
+}

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:theraphy_flutter/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
@@ -20,23 +21,21 @@ class _EmergencyScreenState extends ConsumerState<EmergencyScreen> {
   String _severity = 'medium';
 
   Future<void> _triggerEmergency() async {
+    final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Confirm Emergency Alert'),
-        content: const Text(
-          'This will notify your therapist and support team immediately. '
-          'Are you sure you want to send an emergency alert?',
-        ),
+        title: Text(l10n.confirmEmergencyTitle),
+        content: Text(l10n.confirmEmergencyMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-            child: const Text('Send Alert'),
+            child: Text(l10n.sendAlert),
           ),
         ],
       ),
@@ -52,8 +51,7 @@ class _EmergencyScreenState extends ConsumerState<EmergencyScreen> {
         'message': 'Emergency alert triggered from mobile app',
       });
       if (mounted) {
-        SnackbarUtils.showSuccess(
-            context, 'Emergency alert sent. Help is on the way.');
+        SnackbarUtils.showSuccess(context, l10n.emergencyAlertSent);
       }
     } catch (e) {
       if (mounted) SnackbarUtils.showError(context, e.toString());
@@ -64,8 +62,10 @@ class _EmergencyScreenState extends ConsumerState<EmergencyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Emergency Support')),
+      appBar: AppBar(title: Text(l10n.emergencySupport)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -80,15 +80,15 @@ class _EmergencyScreenState extends ConsumerState<EmergencyScreen> {
                 border: Border.all(
                     color: AppColors.error.withOpacity(0.3), width: 1),
               ),
-              child: const Column(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.warning_amber, color: AppColors.error),
-                      SizedBox(width: 8),
-                      Text('Crisis Support',
-                          style: TextStyle(
+                      const Icon(Icons.warning_amber, color: AppColors.error),
+                      const SizedBox(width: 8),
+                      Text(l10n.crisisSupport,
+                          style: const TextStyle(
                             fontFamily: 'Outfit',
                             color: AppColors.error,
                             fontWeight: FontWeight.w700,
@@ -96,38 +96,35 @@ class _EmergencyScreenState extends ConsumerState<EmergencyScreen> {
                           )),
                     ],
                   ),
-                  SizedBox(height: 8),
-                  Text(
-                    'If you are in immediate danger, call emergency services (911) first. '
-                    'This feature alerts your therapist and support team.',
-                    style: AppTextStyles.bodyMedium,
-                  ),
+                  const SizedBox(height: 8),
+                  Text(l10n.crisisBannerMessage,
+                      style: AppTextStyles.bodyMedium),
                 ],
               ),
             ),
             const SizedBox(height: 28),
 
             // Severity selector
-            const Text('Severity Level', style: AppTextStyles.headlineMedium),
+            Text(l10n.severityLevel, style: AppTextStyles.headlineMedium),
             const SizedBox(height: 12),
             Row(
               children: [
                 _SeverityChip(
-                  label: 'Low',
+                  label: l10n.severityLow,
                   color: AppColors.success,
                   selected: _severity == 'low',
                   onTap: () => setState(() => _severity = 'low'),
                 ),
                 const SizedBox(width: 10),
                 _SeverityChip(
-                  label: 'Medium',
+                  label: l10n.severityMedium,
                   color: AppColors.warning,
                   selected: _severity == 'medium',
                   onTap: () => setState(() => _severity = 'medium'),
                 ),
                 const SizedBox(width: 10),
                 _SeverityChip(
-                  label: 'High',
+                  label: l10n.severityHigh,
                   color: AppColors.error,
                   selected: _severity == 'high',
                   onTap: () => setState(() => _severity = 'high'),
@@ -158,15 +155,15 @@ class _EmergencyScreenState extends ConsumerState<EmergencyScreen> {
                 child: Center(
                   child: _isTriggering
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : const Row(
+                      : Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.warning_amber,
+                            const Icon(Icons.warning_amber,
                                 color: Colors.white, size: 28),
-                            SizedBox(width: 12),
+                            const SizedBox(width: 12),
                             Text(
-                              'SEND EMERGENCY ALERT',
-                              style: TextStyle(
+                              l10n.sendEmergencyAlert,
+                              style: const TextStyle(
                                 fontFamily: 'Outfit',
                                 color: Colors.white,
                                 fontSize: 18,
@@ -182,25 +179,25 @@ class _EmergencyScreenState extends ConsumerState<EmergencyScreen> {
             const SizedBox(height: 28),
 
             // Resources
-            const Text('Crisis Resources', style: AppTextStyles.headlineMedium),
+            Text(l10n.crisisResources, style: AppTextStyles.headlineMedium),
             const SizedBox(height: 12),
             ...[
               _Resource(
                 icon: Icons.phone,
-                title: 'National Crisis Hotline',
-                subtitle: 'Call or text 988',
+                title: l10n.nationalCrisisHotline,
+                subtitle: l10n.nationalCrisisHotlineSubtitle,
                 color: AppColors.primary,
               ),
               _Resource(
                 icon: Icons.chat_bubble_outline,
-                title: 'Crisis Text Line',
-                subtitle: 'Text HOME to 741741',
+                title: l10n.crisisTextLine,
+                subtitle: l10n.crisisTextLineSubtitle,
                 color: AppColors.secondary,
               ),
               _Resource(
                 icon: Icons.local_hospital_outlined,
-                title: 'Emergency Services',
-                subtitle: 'Call 911',
+                title: l10n.emergencyServices,
+                subtitle: l10n.emergencyServicesSubtitle,
                 color: AppColors.error,
               ),
             ].map((r) => Padding(

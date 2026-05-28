@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:theraphy_flutter/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -7,7 +8,6 @@ import '../../../core/constants/app_text_styles.dart';
 import '../../../routes/app_routes.dart';
 import 'package:theraphy_flutter/features/auth/presentation/providers/auth_provider.dart';
 import '../../../models/emergency_contact_model.dart';
-import '../../../utils/snackbar_utils.dart';
 import '../../../widgets/app_button.dart';
 import '../../../widgets/app_card.dart';
 
@@ -17,10 +17,11 @@ class ClientProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile'),
+        title: Text(l10n.profileTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_outlined),
@@ -70,7 +71,7 @@ class ClientProfileScreen extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      'Client',
+                      l10n.client,
                       style: const TextStyle(
                         fontFamily: 'Outfit',
                         color: AppColors.primary,
@@ -90,26 +91,28 @@ class ClientProfileScreen extends ConsumerWidget {
                 children: [
                   _InfoRow(
                     icon: Icons.cake_outlined,
-                    label: 'Age',
-                    value: user?.age != null ? '${user!.age} years' : 'Not set',
+                    label: l10n.age,
+                    value: user?.age != null
+                        ? l10n.yearsOld(user!.age!)
+                        : l10n.notSet,
                   ),
                   const Divider(),
                   _InfoRow(
                     icon: Icons.phone_outlined,
-                    label: 'Phone',
-                    value: user?.phone ?? 'Not set',
+                    label: l10n.phone,
+                    value: user?.phone ?? l10n.notSet,
                   ),
                   const Divider(),
                   _InfoRow(
                     icon: Icons.wc_outlined,
-                    label: 'Gender',
-                    value: user?.gender ?? 'Not set',
+                    label: l10n.gender,
+                    value: user?.gender ?? l10n.notSet,
                   ),
                   const Divider(),
                   _InfoRow(
                     icon: Icons.psychology_outlined,
-                    label: 'Primary Concern',
-                    value: user?.primaryPhobia ?? 'Not set',
+                    label: l10n.primaryConcern,
+                    value: user?.primaryPhobia ?? l10n.notSet,
                   ),
                 ],
               ),
@@ -139,7 +142,7 @@ class ClientProfileScreen extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Anxiety Level',
+                          Text(l10n.anxietyLevelLabel,
                               style: AppTextStyles.titleMedium),
                           Text(
                             '${user.currentAnxietyLevel}/10',
@@ -159,29 +162,49 @@ class ClientProfileScreen extends ConsumerWidget {
               ),
             const SizedBox(height: 16),
 
+            // Language settings entry
+            AppCard(
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.secondary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.language, color: AppColors.secondary),
+                ),
+                title: Text(l10n.language, style: AppTextStyles.titleMedium),
+                trailing: const Icon(Icons.chevron_right, color: AppColors.textHint),
+                onTap: () => context.push(AppRoutes.languageSettings),
+              ),
+            ),
+            const SizedBox(height: 16),
+
             // Emergency Contacts
             const _EmergencyContactsCard(),
             const SizedBox(height: 28),
 
             // Logout
             AppButton(
-              label: 'Sign Out',
+              label: l10n.signOut,
               variant: AppButtonVariant.outlined,
               icon: Icons.logout,
               onPressed: () async {
                 final confirmed = await showDialog<bool>(
                   context: context,
                   builder: (dialogContext) => AlertDialog(
-                    title: const Text('Sign Out'),
-                    content: const Text('Are you sure you want to sign out?'),
+                    title: Text(l10n.signOutConfirmTitle),
+                    content: Text(l10n.signOutConfirmMessage),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(dialogContext, false),
-                        child: const Text('Cancel'),
+                        child: Text(l10n.cancel),
                       ),
                       ElevatedButton(
                         onPressed: () => Navigator.pop(dialogContext, true),
-                        child: const Text('Sign Out'),
+                        child: Text(l10n.signOut),
                       ),
                     ],
                   ),
@@ -235,6 +258,7 @@ class _EmergencyContactsCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
+    final l10n = AppLocalizations.of(context);
     if (user == null) return const SizedBox.shrink();
 
     final contacts = user.emergencyContacts;
@@ -246,7 +270,7 @@ class _EmergencyContactsCard extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Emergency Contacts', style: AppTextStyles.titleLarge),
+              Text(l10n.emergencyContacts, style: AppTextStyles.titleLarge),
               IconButton(
                 icon: const Icon(Icons.add_circle_outline, color: AppColors.primary),
                 onPressed: () => _showContactSheet(context, ref, null),
@@ -259,7 +283,7 @@ class _EmergencyContactsCard extends ConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 child: Text(
-                  'No emergency contacts added yet.',
+                  l10n.noEmergencyContacts,
                   style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textHint),
                 ),
               ),
@@ -351,7 +375,7 @@ class _ContactTile extends StatelessWidget {
             } else {
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Could not launch phone dialer')),
+                  SnackBar(content: Text(AppLocalizations.of(context).couldNotLaunchDialer)),
                 );
               }
             }
@@ -360,8 +384,8 @@ class _ContactTile extends StatelessWidget {
         PopupMenuButton<String>(
           icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
           onSelected: (value) async {
+            final l10n = AppLocalizations.of(context);
             if (value == 'edit') {
-              // Show sheet
               showModalBottomSheet(
                 context: context,
                 isScrollControlled: true,
@@ -372,23 +396,23 @@ class _ContactTile extends StatelessWidget {
               final confirm = await showDialog<bool>(
                 context: context,
                 builder: (ctx) => AlertDialog(
-                  title: const Text('Delete Contact'),
-                  content: Text('Are you sure you want to remove ${contact.name}?'),
+                  title: Text(l10n.deleteContact),
+                  content: Text(l10n.deleteContactConfirm(contact.name)),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(ctx, false),
-                      child: const Text('Cancel'),
+                      child: Text(l10n.cancel),
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(ctx, true),
-                      child: const Text('Delete', style: TextStyle(color: AppColors.error)),
+                      child: Text(l10n.delete,
+                          style: const TextStyle(color: AppColors.error)),
                     ),
                   ],
                 ),
               );
 
               if (confirm == true && context.mounted) {
-                // Delete
                 showDialog(
                   context: context,
                   barrierDismissible: false,
@@ -396,26 +420,27 @@ class _ContactTile extends StatelessWidget {
                 );
                 final success = await ref.read(authProvider.notifier).deleteEmergencyContact(contact.id);
                 if (context.mounted) {
-                  Navigator.pop(context); // pop spinner
+                  Navigator.pop(context);
                   if (!success) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Failed to delete contact')),
+                      SnackBar(content: Text(l10n.failedToDeleteContact)),
                     );
                   }
                 }
               }
             }
           },
-          itemBuilder: (context) => [
-            const PopupMenuItem(
-              value: 'edit',
-              child: Text('Edit'),
-            ),
-            const PopupMenuItem(
-              value: 'delete',
-              child: Text('Delete', style: const TextStyle(color: AppColors.error)),
-            ),
-          ],
+          itemBuilder: (context) {
+            final l10n = AppLocalizations.of(context);
+            return [
+              PopupMenuItem(value: 'edit', child: Text(l10n.edit)),
+              PopupMenuItem(
+                value: 'delete',
+                child: Text(l10n.delete,
+                    style: const TextStyle(color: AppColors.error)),
+              ),
+            ];
+          },
         ),
       ],
     );
@@ -456,6 +481,7 @@ class _ContactSheetState extends ConsumerState<_ContactSheet> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    final l10n = AppLocalizations.of(context);
 
     setState(() => _isLoading = true);
 
@@ -481,7 +507,7 @@ class _ContactSheetState extends ConsumerState<_ContactSheet> {
         Navigator.pop(context);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to save contact')),
+          SnackBar(content: Text(l10n.failedToSaveContact)),
         );
       }
     }
@@ -489,6 +515,7 @@ class _ContactSheetState extends ConsumerState<_ContactSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -510,7 +537,7 @@ class _ContactSheetState extends ConsumerState<_ContactSheet> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      widget.contact == null ? 'Add Contact' : 'Edit Contact',
+                      widget.contact == null ? l10n.addContact : l10n.editContact,
                       style: AppTextStyles.headlineMedium,
                     ),
                     IconButton(
@@ -523,36 +550,36 @@ class _ContactSheetState extends ConsumerState<_ContactSheet> {
                 TextFormField(
                   controller: _nameController,
                   decoration: InputDecoration(
-                    labelText: 'Full Name',
+                    labelText: l10n.fullName,
                     prefixIcon: const Icon(Icons.person_outline),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  validator: (val) => val == null || val.isEmpty ? 'Required' : null,
+                  validator: (val) => val == null || val.isEmpty ? l10n.required : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
                   decoration: InputDecoration(
-                    labelText: 'Phone Number',
+                    labelText: l10n.phoneNumber,
                     prefixIcon: const Icon(Icons.phone_outlined),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  validator: (val) => val == null || val.isEmpty ? 'Required' : null,
+                  validator: (val) => val == null || val.isEmpty ? l10n.required : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _relationshipController,
                   decoration: InputDecoration(
-                    labelText: 'Relationship',
-                    hintText: 'e.g. Spouse, Parent, Friend',
+                    labelText: l10n.relationship,
+                    hintText: l10n.relationshipHint,
                     prefixIcon: const Icon(Icons.family_restroom),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
                 const SizedBox(height: 32),
                 AppButton(
-                  label: 'Save Contact',
+                  label: l10n.saveContact,
                   isLoading: _isLoading,
                   onPressed: _save,
                 ),

@@ -24,13 +24,14 @@ class AppRoutes {
   static const progress = '/progress';
   static const clientProfile = '/profile';
   static const editProfile = '/profile/edit';
+  static const notifications = '/notifications';
   static const emergency = '/emergency';
   static const scheduling = '/scheduling';
   static const therapistProfile = '/scheduling/profile';
   static const exposure = '/exposure';
   static const exposureSession = '/exposure/session';
 
-  // Payment Booking Flow
+  static const languageSettings = '/settings/language';
   static const bookingSummary = '/booking/summary';
   static const paymentMethod = '/booking/payment-method';
   static const cardPayment = '/booking/card-payment';

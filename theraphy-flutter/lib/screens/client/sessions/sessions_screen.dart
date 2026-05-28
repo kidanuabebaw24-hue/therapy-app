@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:theraphy_flutter/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
@@ -7,7 +8,6 @@ import 'package:theraphy_flutter/features/appointments/presentation/providers/se
 import '../../../utils/snackbar_utils.dart';
 import '../../../widgets/app_button.dart';
 import '../../../widgets/app_card.dart';
-import '../../../widgets/loading_overlay.dart';
 
 class SessionsScreen extends ConsumerStatefulWidget {
   const SessionsScreen({super.key});
@@ -36,15 +36,16 @@ class _SessionsScreenState extends ConsumerState<SessionsScreen>
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(sessionProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Sessions'),
+        title: Text(l10n.sessions),
         bottom: TabBar(
           controller: _tabCtrl,
-          tabs: const [
-            Tab(text: 'Upcoming'),
-            Tab(text: 'Past'),
+          tabs: [
+            Tab(text: l10n.upcoming),
+            Tab(text: l10n.past),
           ],
           labelColor: AppColors.primary,
           unselectedLabelColor: AppColors.textHint,
@@ -59,16 +60,16 @@ class _SessionsScreenState extends ConsumerState<SessionsScreen>
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showBookingSheet(context),
         icon: const Icon(Icons.add),
-        label: const Text('Book Session',
-            style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w600)),
+        label: Text(l10n.bookSession,
+            style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.w600)),
       ),
       body: state.isLoading
           ? const Center(child: CircularProgressIndicator())
           : TabBarView(
               controller: _tabCtrl,
               children: [
-                _SessionList(sessions: state.upcoming, emptyMessage: 'No upcoming sessions'),
-                _SessionList(sessions: state.past, emptyMessage: 'No past sessions'),
+                _SessionList(sessions: state.upcoming, emptyMessage: l10n.noUpcomingSessions),
+                _SessionList(sessions: state.past, emptyMessage: l10n.noPastSessions),
               ],
             ),
     );
@@ -125,9 +126,13 @@ class _SessionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final statusColor = session.isCompleted
         ? AppColors.success
-        : session.isCancelled
+        : session.isCancelled || session.isRejected
             ? AppColors.error
-            : AppColors.primary;
+            : session.isPending
+                ? AppColors.warning
+                : AppColors.primary;
+
+    final statusLabel = session.isPending ? 'Pending Approval' : _capitalize(session.status);
 
     return AppCard(
       child: Column(
@@ -151,7 +156,7 @@ class _SessionTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      session.therapistName ?? 'Therapist',
+                      session.therapistName ?? AppLocalizations.of(context).therapist,
                       style: AppTextStyles.titleMedium,
                     ),
                     Text(
@@ -161,7 +166,7 @@ class _SessionTile extends StatelessWidget {
                   ],
                 ),
               ),
-              _StatusBadge(label: _capitalize(session.status), color: statusColor),
+              _StatusBadge(label: statusLabel, color: statusColor),
             ],
           ),
           const SizedBox(height: 12),
@@ -178,7 +183,9 @@ class _SessionTile extends StatelessWidget {
               const Spacer(),
               _InfoChip(
                 icon: Icons.payment,
-                label: session.isPaid ? 'Paid' : 'Pending',
+                label: session.isPaid
+                    ? AppLocalizations.of(context).paid
+                    : AppLocalizations.of(context).pending,
                 color: session.isPaid ? AppColors.success : AppColors.warning,
               ),
             ],
@@ -259,16 +266,48 @@ class _BookingSheetState extends ConsumerState<_BookingSheet> {
   String _type = 'consultation';
 
   Future<void> _book() async {
+    final l10n = AppLocalizations.of(context);
     try {
       await ref.read(sessionProvider.notifier).bookSession(
-            therapistId: 'placeholder', // TODO: wire up therapist picker
+            therapistId: 'placeholder',
             date: _selectedDate,
             duration: _duration,
             type: _type,
           );
       if (mounted) {
         Navigator.pop(context);
-        SnackbarUtils.showSuccess(context, 'Session booked successfully');
+        // Show "Pending Approval" confirmation
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.hourglass_top_rounded,
+                      color: Colors.orange, size: 22),
+                ),
+                const SizedBox(width: 12),
+                const Text('Pending Approval'),
+              ],
+            ),
+            content: const Text(
+              'Your booking request has been sent to the admin for approval. '
+              'You will receive a notification once it is reviewed.',
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
       }
     } catch (e) {
       if (mounted) SnackbarUtils.showError(context, e.toString());
@@ -278,6 +317,7 @@ class _BookingSheetState extends ConsumerState<_BookingSheet> {
   @override
   Widget build(BuildContext context) {
     final isSubmitting = ref.watch(sessionProvider).isSubmitting;
+    final l10n = AppLocalizations.of(context);
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -286,9 +326,9 @@ class _BookingSheetState extends ConsumerState<_BookingSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Book a Session', style: AppTextStyles.headlineLarge),
+          Text(l10n.bookASession, style: AppTextStyles.headlineLarge),
           const SizedBox(height: 20),
-          const Text('Session Type', style: AppTextStyles.titleMedium),
+          Text(l10n.sessionType, style: AppTextStyles.titleMedium),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
@@ -301,7 +341,7 @@ class _BookingSheetState extends ConsumerState<_BookingSheet> {
             }).toList(),
           ),
           const SizedBox(height: 16),
-          const Text('Duration', style: AppTextStyles.titleMedium),
+          Text(l10n.duration, style: AppTextStyles.titleMedium),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
@@ -315,7 +355,7 @@ class _BookingSheetState extends ConsumerState<_BookingSheet> {
           ),
           const SizedBox(height: 24),
           AppButton(
-            label: 'Confirm Booking',
+            label: l10n.confirmBooking,
             onPressed: _book,
             isLoading: isSubmitting,
             icon: Icons.check,

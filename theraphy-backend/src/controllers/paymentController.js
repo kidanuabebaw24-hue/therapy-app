@@ -1,5 +1,6 @@
 import prisma from '../config/prisma.js';
 import { sendSuccess, sendError } from '../utils/responseHelper.js';
+import { createNotification } from '../utils/notificationHelper.js';
 
 /**
  * Mock create payment (kept for backward compatibility if needed)
@@ -30,17 +31,21 @@ export const createPayment = async (req, res) => {
 
     await prisma.appointment.update({
       where: { id: appointmentId },
-      data: { paymentStatus: 'paid' },
-    });
-
-    await prisma.notification.create({
       data: {
-        userId: appointment.therapistId,
-        title: 'Payment Received',
-        message: `Payment of $${amount} received`,
-        type: 'payment',
+        paymentStatus: 'paid',
+        status: 'pending_admin_approval',
       },
     });
+
+    const admin = await prisma.user.findFirst({ where: { role: 'admin' } });
+    if (admin) {
+      await createNotification(
+        admin.id,
+        'New Booking Approval Required',
+        'New appointment booking requires approval.',
+        'booking_request',
+      );
+    }
 
     return sendSuccess(res, payment, 'Payment processed', 201);
   } catch (error) {
@@ -330,24 +335,23 @@ export const verifyChapaPayment = async (req, res) => {
       }),
       prisma.appointment.update({
         where: { id: payment.appointmentId },
-        data: { paymentStatus: 'paid' },
+        data: {
+          paymentStatus: 'paid',
+          status: 'pending_admin_approval',
+        },
       }),
     ]);
 
-    // Send payment success notification
+    // Notify admin for approval workflow
     try {
-      const therapist = await prisma.therapist.findUnique({
-        where: { id: payment.appointment.therapistId },
-      });
-      if (therapist) {
-        await prisma.notification.create({
-          data: {
-            userId: therapist.userId,
-            title: 'Payment Confirmed',
-            message: `A consultation booking of ETB ${chapaData.data.amount} has been successfully paid.`,
-            type: 'payment',
-          },
-        });
+      const admin = await prisma.user.findFirst({ where: { role: 'admin' } });
+      if (admin) {
+        await createNotification(
+          admin.id,
+          'New Booking Approval Required',
+          'New appointment booking requires approval.',
+          'booking_request',
+        );
       }
     } catch (notifErr) {
       console.warn('⚠️ Notification create skipped:', notifErr.message);
@@ -401,9 +405,22 @@ export const chapaSuccessPage = async (req, res) => {
               }),
               prisma.appointment.update({
                 where: { id: payment.appointmentId },
-                data: { paymentStatus: 'paid' },
+                data: {
+                  paymentStatus: 'paid',
+                  status: 'pending_admin_approval',
+                },
               }),
             ]);
+
+            const admin = await prisma.user.findFirst({ where: { role: 'admin' } });
+            if (admin) {
+              await createNotification(
+                admin.id,
+                'New Booking Approval Required',
+                'New appointment booking requires approval.',
+                'booking_request',
+              );
+            }
             console.log(`✅ Success landing automatically verified & captured payment for ref: ${tx_ref}`);
           }
         }

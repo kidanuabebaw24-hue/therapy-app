@@ -30,11 +30,13 @@ import '../screens/client/sessions/sessions_screen.dart';
 import '../screens/client/ai_chat/ai_chat_screen.dart';
 import '../screens/client/ai_chat/ai_conversation_screen.dart';
 import '../screens/client/emergency/emergency_support_screen.dart';
+import '../screens/client/notifications/notifications_screen.dart';
 import '../features/payments/screens/booking_summary_screen.dart';
 import '../features/payments/screens/payment_method_screen.dart';
 import '../features/payments/screens/card_payment_screen.dart';
 import '../features/payments/screens/payment_processing_screen.dart';
 import '../features/payments/screens/booking_confirmation_screen.dart';
+import '../core/localization/language_settings_screen.dart';
 import '../models/exposure_model.dart';
 import '../models/assessment_model.dart';
 import '../models/therapist_model.dart';
@@ -47,13 +49,15 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final authState = ref.read(authProvider);
       final isAuth = authState.isAuthenticated;
-      final isInitial = authState.status == AuthStatus.initial;
+      final isInitial = authState.status == AuthStatus.initial ||
+          authState.status == AuthStatus.loading;
       final isSplash = state.matchedLocation == AppRoutes.splash;
-      
-      print('🔀 Router Redirect: location=${state.matchedLocation}, isAuth=$isAuth, status=${authState.status}');
 
-      // Only show splash during initial boot auth check
-      if (isInitial) return AppRoutes.splash;
+      // Always let the splash screen handle its own navigation.
+      if (isSplash) return null;
+
+      // While auth is still resolving, stay put.
+      if (isInitial) return null;
 
       final onAuthPage = state.matchedLocation == AppRoutes.login ||
           state.matchedLocation == AppRoutes.register ||
@@ -64,30 +68,18 @@ final routerProvider = Provider<GoRouter>((ref) {
           state.matchedLocation == AppRoutes.verificationSuccess ||
           state.matchedLocation == AppRoutes.authSuccess;
 
-      // If on splash and auth check finished, move to welcome or dashboard
-      if (isSplash && authState.status != AuthStatus.loading) {
-        final target = isAuth ? AppRoutes.clientDashboard : AppRoutes.welcome;
-        print('🚀 Splash Check: Auth=$isAuth, Status=${authState.status} -> Redirecting to $target');
-        return target;
-      }
+      // Unauthenticated user trying to access a protected page → welcome.
+      if (!isAuth && !onAuthPage) return AppRoutes.welcome;
 
-      if (!isAuth && !onAuthPage && !isSplash) {
-        print('🚫 Router: Not authenticated and not on auth page. Redirecting to Welcome.');
-        return AppRoutes.welcome;
-      }
-      
-      if (isAuth && (onAuthPage || isSplash) && state.matchedLocation != AppRoutes.authSuccess) {
+      // Authenticated user on an auth page → dashboard (or CBT if required).
+      if (isAuth && onAuthPage && state.matchedLocation != AppRoutes.authSuccess) {
         final user = authState.user;
-        print('✅ Router: Authenticated on auth/splash page. User: ${user?.name}');
         if (user?.requiresCBT == true && user?.hasCompletedInitialCBT == false) {
-          print('📚 Router: Redirecting to CBT Exercises');
           return AppRoutes.cbtExercises;
         }
-        print('🏠 Router: Redirecting to Client Dashboard');
         return AppRoutes.clientDashboard;
       }
-      
-      print('↔️ Router: No redirection needed for ${state.matchedLocation}');
+
       return null;
     },
     routes: [
@@ -183,6 +175,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.bookingConfirmation,
         builder: (_, __) => const BookingConfirmationScreen(),
       ),
+      GoRoute(
+        path: AppRoutes.languageSettings,
+        builder: (_, __) => const LanguageSettingsScreen(),
+      ),
 
       ShellRoute(
         builder: (context, state, child) => ClientShell(child: child),
@@ -210,6 +206,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: AppRoutes.editProfile,
             builder: (_, __) => const EditProfileScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.notifications,
+            builder: (_, __) => const NotificationsScreen(),
           ),
           GoRoute(
             path: AppRoutes.cbtExercises,
@@ -246,6 +246,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: AppRoutes.emergency,
             builder: (_, __) => const EmergencySupportScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.notifications,
+            builder: (_, __) => const NotificationsScreen(),
           ),
         ],
       ),

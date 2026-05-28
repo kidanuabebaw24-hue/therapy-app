@@ -10,7 +10,8 @@ class BookingPaymentModel {
   final String paymentStatus; // pending | paid | failed
   final String transactionId;
   final double amount;
-  final String bookingStatus; // scheduled | completed | cancelled
+  final String
+      bookingStatus; // pending_payment | pending_admin_approval | approved | rejected | cancelled
 
   const BookingPaymentModel({
     required this.therapistId,

@@ -33,12 +33,17 @@ class SessionState {
   }
 
   List<SessionModel> get upcoming => sessions
-      .where((s) => s.isScheduled && s.date.isAfter(DateTime.now()))
+      .where((s) => (s.isScheduled || s.isApproved || s.isPending) && s.date.isAfter(DateTime.now()))
+      .toList()
+    ..sort((a, b) => a.date.compareTo(b.date));
+
+  List<SessionModel> get pending => sessions
+      .where((s) => s.isPending)
       .toList()
     ..sort((a, b) => a.date.compareTo(b.date));
 
   List<SessionModel> get past => sessions
-      .where((s) => s.isCompleted || s.date.isBefore(DateTime.now()))
+      .where((s) => s.isCompleted || s.isRejected || s.date.isBefore(DateTime.now()))
       .toList()
     ..sort((a, b) => b.date.compareTo(a.date));
 }
@@ -74,7 +79,7 @@ class SessionNotifier extends StateNotifier<SessionState> {
   }) async {
     state = state.copyWith(isSubmitting: true, error: null);
     try {
-      final response = await _apiClient.post(ApiConstants.appointments, data: {
+      final response = await _apiClient.post(ApiConstants.bookAppointment, data: {
         'therapistId': therapistId,
         'date': date.toIso8601String(),
         'duration': duration,

@@ -1,4 +1,4 @@
-﻿class Validators {
+class Validators {
   static String? email(String? value) {
     if (value == null || value.trim().isEmpty) return 'Email is required';
     final regex = RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$');
@@ -30,7 +30,7 @@
     final age = int.tryParse(value);
     if (age == null) return 'Enter a valid age';
     if (age < 18) return 'You must be at least 18 years old';
-    if (age > 120) return 'Enter a valid age (18â€“120)';
+    if (age > 120) return 'Enter a valid age (18–120)';
     return null;
   }
 

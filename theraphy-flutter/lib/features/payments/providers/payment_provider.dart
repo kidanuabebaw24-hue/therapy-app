@@ -9,39 +9,52 @@ import '../../../../core/network/network_providers.dart';
 class PaymentState {
   final BookingPaymentModel? currentBooking;
   final bool isProcessing;
+  final bool isCheckingAvailability;
   final String? error;
   final String? lastTransactionId;
   final String? txRef;
   final String? chapaCheckoutUrl;
   final bool isVerified;
+  final bool isAvailable;
+  final String? availabilityMessage;
 
   const PaymentState({
     this.currentBooking,
     this.isProcessing = false,
+    this.isCheckingAvailability = false,
     this.error,
     this.lastTransactionId,
     this.txRef,
     this.chapaCheckoutUrl,
     this.isVerified = false,
+    this.isAvailable = false,
+    this.availabilityMessage,
   });
 
   PaymentState copyWith({
     BookingPaymentModel? currentBooking,
     bool? isProcessing,
+    bool? isCheckingAvailability,
     String? error,
     String? lastTransactionId,
     String? txRef,
     String? chapaCheckoutUrl,
     bool? isVerified,
+    bool? isAvailable,
+    String? availabilityMessage,
   }) {
     return PaymentState(
       currentBooking: currentBooking ?? this.currentBooking,
       isProcessing: isProcessing ?? this.isProcessing,
+      isCheckingAvailability:
+          isCheckingAvailability ?? this.isCheckingAvailability,
       error: error,
       lastTransactionId: lastTransactionId ?? this.lastTransactionId,
       txRef: txRef ?? this.txRef,
       chapaCheckoutUrl: chapaCheckoutUrl ?? this.chapaCheckoutUrl,
       isVerified: isVerified ?? this.isVerified,
+      isAvailable: isAvailable ?? this.isAvailable,
+      availabilityMessage: availabilityMessage,
     );
   }
 }
@@ -74,10 +87,64 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
       paymentStatus: 'pending',
       transactionId: '',
       amount: amount,
-      bookingStatus: 'pending',
+      bookingStatus: 'pending_payment',
     );
 
     state = PaymentState(currentBooking: booking);
+  }
+
+  Future<bool> checkTherapistAvailability({
+    required String therapistId,
+    required DateTime date,
+    required String timeSlot,
+    int duration = 50,
+  }) async {
+    state = state.copyWith(
+      isCheckingAvailability: true,
+      error: null,
+      availabilityMessage: null,
+      isAvailable: false,
+    );
+
+    try {
+      final apiClient = _ref.read(apiClientProvider);
+      final datePart =
+          '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      final bookingDate = combineDateAndTime(date, timeSlot);
+      final timePart =
+          '${bookingDate.hour.toString().padLeft(2, '0')}:${bookingDate.minute.toString().padLeft(2, '0')}';
+
+      final response =
+          await apiClient.post('/appointments/check-availability', data: {
+        'therapistId': therapistId,
+        'appointmentDate': datePart,
+        'appointmentTime': timePart,
+        'duration': duration,
+      });
+
+      final payload = response.data['data'] ?? {};
+      final available = payload['available'] == true;
+      final message = (payload['message'] as String?) ??
+          (available
+              ? 'Therapist is available for this time slot.'
+              : 'This therapist is not available at the selected time. Please choose another slot.');
+
+      state = state.copyWith(
+        isCheckingAvailability: false,
+        isAvailable: available,
+        availabilityMessage: message,
+      );
+      return available;
+    } catch (e) {
+      state = state.copyWith(
+        isCheckingAvailability: false,
+        isAvailable: false,
+        availabilityMessage:
+            'This therapist is not available at the selected time. Please choose another slot.',
+        error: e.toString(),
+      );
+      return false;
+    }
   }
 
   void selectPaymentMethod(String method) {
@@ -90,9 +157,8 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
     }
   }
 
-  /**
-   * Helper to parse timeSlot (e.g. "10:00 AM", "02:30 PM") and combine with DateTime date
-   */
+  /// Helper to parse timeSlot (e.g. "10:00 AM", "02:30 PM")
+  /// and combine with DateTime date.
   DateTime combineDateAndTime(DateTime date, String timeSlot) {
     try {
       final parts = timeSlot.trim().split(' ');
@@ -118,7 +184,7 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
     required String cardNumber,
   }) async {
     if (state.currentBooking == null) return false;
-    
+
     state = state.copyWith(isProcessing: true, error: null);
 
     final result = await _paymentService.processPayment(
@@ -134,7 +200,7 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
         lastTransactionId: result.transactionId,
         currentBooking: state.currentBooking!.copyWith(
           paymentStatus: 'paid',
-          bookingStatus: 'scheduled',
+          bookingStatus: 'pending_admin_approval',
           transactionId: result.transactionId,
         ),
       );
@@ -153,7 +219,7 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
 
   Future<bool> executeInstantPayment(String method) async {
     if (state.currentBooking == null) return false;
-    
+
     state = state.copyWith(isProcessing: true, error: null, isVerified: false);
 
     // Mock flow for Telebirr / PayPal / etc.
@@ -165,7 +231,7 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
         lastTransactionId: transactionId,
         currentBooking: state.currentBooking!.copyWith(
           paymentStatus: 'paid',
-          bookingStatus: 'scheduled',
+          bookingStatus: 'pending_admin_approval',
           paymentMethod: method,
           transactionId: transactionId,
         ),
@@ -182,7 +248,8 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
         state.currentBooking!.appointmentTime,
       );
 
-      final response = await apiClient.post('/payments/chapa/initialize', data: {
+      final response =
+          await apiClient.post('/payments/chapa/initialize', data: {
         'therapistId': state.currentBooking!.therapistId,
         'date': bookingDate.toIso8601String(),
         'duration': 50,
@@ -249,7 +316,7 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
         lastTransactionId: transactionId,
         currentBooking: state.currentBooking!.copyWith(
           paymentStatus: 'paid',
-          bookingStatus: 'scheduled',
+          bookingStatus: 'pending_admin_approval',
           transactionId: transactionId,
         ),
       );
@@ -257,13 +324,15 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
     } catch (e) {
       state = state.copyWith(
         isProcessing: false,
-        error: 'We couldn\'t verify your payment yet. Please complete checkout on Chapa\'s website first.',
+        error:
+            'We couldn\'t verify your payment yet. Please complete checkout on Chapa\'s website first.',
       );
       return false;
     }
   }
 }
 
-final paymentProvider = StateNotifierProvider<PaymentNotifier, PaymentState>((ref) {
+final paymentProvider =
+    StateNotifierProvider<PaymentNotifier, PaymentState>((ref) {
   return PaymentNotifier(ref);
 });
