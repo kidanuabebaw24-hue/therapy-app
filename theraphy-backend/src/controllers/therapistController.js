@@ -5,8 +5,11 @@ export const getAvailableTherapists = async (req, res) => {
   try {
     const { specialization, minExperience } = req.query;
     
-    let where = { isVerified: true };
-    
+    let where = {};
+    if (req.user?.role !== 'admin') {
+      where.isVerified = true;
+    }
+
     if (specialization && specialization !== 'all') {
       where.specialization = specialization;
     }
@@ -36,12 +39,15 @@ export const getAvailableTherapists = async (req, res) => {
         
         return {
           ...t,
+          name: t.user?.name || t.name,
+          email: t.user?.email || t.email,
+          phone: t.user?.phone || t.phone,
           totalSessions,
           activeClients,
         };
       })
     );
-    
+
     return sendSuccess(res, therapistsWithStats, 'Therapists retrieved');
   } catch (error) {
     return sendError(res, error.message, 500, error);

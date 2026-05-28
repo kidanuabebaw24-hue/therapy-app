@@ -3,6 +3,7 @@ import { sendSuccess, sendError } from '../utils/responseHelper.js';
 import {
   formatAssignmentForTherapist,
   formatPatientForTherapist,
+  formatTherapistForAdmin,
 } from '../utils/formatAssignmentClient.js';
 
 export const assignTherapist = async (req, res) => {
@@ -119,6 +120,48 @@ export const getMyClients = async (req, res) => {
     const clients = Array.from(clientMap.values());
 
     return sendSuccess(res, clients, 'Clients retrieved');
+  } catch (error) {
+    return sendError(res, error.message, 500, error);
+  }
+};
+
+/** Admin: list all therapist–client assignments */
+export const getAllAssignments = async (req, res) => {
+  try {
+    const assignments = await prisma.therapistAssignment.findMany({
+      include: {
+        patient: {
+          include: {
+            user: { select: { id: true, name: true, email: true, phone: true } },
+          },
+        },
+        therapist: {
+          include: {
+            user: { select: { id: true, name: true, email: true, phone: true } },
+          },
+        },
+      },
+      orderBy: { assignedAt: 'desc' },
+    });
+
+    const formatted = assignments.map(formatAssignmentForTherapist);
+
+    return sendSuccess(res, { assignments: formatted }, 'Assignments retrieved');
+  } catch (error) {
+    return sendError(res, error.message, 500, error);
+  }
+};
+
+export const endAssignment = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const updated = await prisma.therapistAssignment.update({
+      where: { id },
+      data: { status: 'inactive' },
+    });
+
+    return sendSuccess(res, updated, 'Assignment ended');
   } catch (error) {
     return sendError(res, error.message, 500, error);
   }

@@ -79,19 +79,65 @@ export const handleEmergency = (id, data) =>
   api.put(`/emergency/${id}/handle`, data).then((res) => res.data);
 
 // ── Users / Assignments ────────────────────────────────────────────────────────
+const normalizeClientRow = (row) => {
+  const user = row?.user || {};
+  return {
+    ...row,
+    id: row?.id,
+    name: row?.name || user.name || 'Client',
+    email: row?.email || user.email || '',
+    phone: row?.phone || user.phone || null,
+  };
+};
+
+const normalizeTherapistRow = (row) => {
+  const user = row?.user || {};
+  return {
+    ...row,
+    id: row?.id,
+    name: row?.name || user.name || 'Therapist',
+    email: row?.email || user.email || '',
+    phone: row?.phone || user.phone || null,
+  };
+};
+
 export const getClients = () =>
-  api.get("/users/clients").then((res) => res.data);
+  api.get('/users/clients').then((res) => {
+    const raw = unwrap(res.data);
+    const list = Array.isArray(raw) ? raw : raw?.clients ?? [];
+    return list.map(normalizeClientRow);
+  });
+
 export const getTherapists = () =>
-  api.get("/therapists").then((res) => res.data);
+  api.get('/therapists').then((res) => {
+    const raw = unwrap(res.data);
+    const list = Array.isArray(raw) ? raw : raw?.therapists ?? [];
+    return list.map(normalizeTherapistRow);
+  });
+
 export const getAllAssignments = () =>
-  api.get("/assignments").then((res) => res.data);
+  api.get('/assignments').then((res) => {
+    const payload = unwrap(res.data);
+    const assignments = payload?.assignments ?? (Array.isArray(payload) ? payload : []);
+    return { assignments };
+  });
+
 export const getMyTherapist = () =>
-  api.get("/assignments/my-therapist").then((res) => res.data);
+  api.get('/assignments/my-therapist').then((res) => unwrap(res.data));
+
 export const getAvailableTherapists = () =>
-  api.get("/assignments/available-therapists").then((res) => res.data);
+  api.get('/assignments/available-therapists').then((res) => unwrap(res.data));
+
 export const assignTherapist = (data) =>
-  api.post("/assignments", data).then((res) => res.data);
+  api.post('/assignments/assign', data).then((res) => ({
+    ...unwrap(res.data),
+    message: res.data?.message || 'Therapist assigned',
+  }));
+
 export const endAssignment = (assignmentId) =>
-  api.put(`/assignments/${assignmentId}/end`).then((res) => res.data);
+  api.put(`/assignments/${assignmentId}/end`).then((res) => ({
+    ...unwrap(res.data),
+    message: res.data?.message || 'Assignment ended',
+  }));
 
 export default api;

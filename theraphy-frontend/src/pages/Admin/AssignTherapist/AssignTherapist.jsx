@@ -40,14 +40,13 @@ const AssignTherapist = () => {
         getTherapists(),
       ]);
 
-      // Process clients data
       const processedClients = Array.isArray(clientsData)
         ? clientsData
-        : clientsData.clients || [];
+        : clientsData?.clients ?? [];
 
       const processedTherapists = Array.isArray(therapistsData)
         ? therapistsData
-        : therapistsData.therapists || [];
+        : therapistsData?.therapists ?? [];
 
       // Fetch all assignments
       let assignmentsData = [];
@@ -55,19 +54,18 @@ const AssignTherapist = () => {
       try {
         const allAssignmentsResponse = await getAllAssignments();
         
-        if (allAssignmentsResponse && allAssignmentsResponse.assignments) {
-          // Filter out assignments with null patient or therapist and map the data
+        if (allAssignmentsResponse?.assignments) {
           assignmentsData = allAssignmentsResponse.assignments
-            .filter(item => item.patient && item.therapist) // Only keep valid assignments
+            .filter((item) => item.patient && item.therapist)
             .map((item) => ({
               id: item.id,
               patient: item.patient,
               therapist: item.therapist,
-              assignedDate: item.startDate || item.createdAt,
+              assignedDate: item.assignedDate || item.assignedAt || item.startDate,
               endDate: item.endDate,
               notes: item.notes,
-              isActive: item.isActive,
-              assignedBy: item.assignedBy
+              isActive: item.isActive ?? item.status === 'active',
+              assignedBy: item.assignedBy,
             }));
         }
       } catch (error) {
@@ -454,6 +452,7 @@ const AssignTherapist = () => {
               data={assignedClients}
               actions={assignedActions}
               onAction={handleAction}
+              emptyMessage="No clients with an active therapist yet"
             />
           </div>
 
@@ -469,6 +468,7 @@ const AssignTherapist = () => {
               data={unassignedClients}
               actions={unassignedActions}
               onAction={handleAction}
+              emptyMessage="All clients have an active therapist"
             />
           </div>
         </div>
@@ -488,6 +488,7 @@ const AssignTherapist = () => {
             data={assignedClients}
             actions={assignedActions}
             onAction={handleAction}
+            emptyMessage="No clients with an active therapist yet"
           />
         </div>
       )}
@@ -506,6 +507,7 @@ const AssignTherapist = () => {
             data={unassignedClients}
             actions={unassignedActions}
             onAction={handleAction}
+            emptyMessage="All clients have an active therapist"
           />
         </div>
       )}

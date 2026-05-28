@@ -14,6 +14,21 @@ export const formatPatientForTherapist = (patient) => {
   };
 };
 
+export const formatTherapistForAdmin = (therapist) => {
+  if (!therapist) return null;
+  const user = therapist.user || {};
+  return {
+    id: therapist.id,
+    userId: therapist.userId,
+    name: user.name || therapist.name || 'Therapist',
+    email: user.email || therapist.email || '',
+    phone: user.phone || therapist.phone || null,
+    specialization: therapist.specialization ?? null,
+    yearsOfExperience: therapist.yearsOfExperience ?? null,
+    isVerified: therapist.isVerified ?? false,
+  };
+};
+
 export const formatAssignmentForTherapist = (assignment) => ({
   id: assignment.id,
   patientId: assignment.patientId,
@@ -21,5 +36,7 @@ export const formatAssignmentForTherapist = (assignment) => ({
   assignedDate: assignment.assignedAt,
   assignedAt: assignment.assignedAt,
   status: assignment.status,
+  isActive: assignment.status === 'active',
   patient: formatPatientForTherapist(assignment.patient),
+  therapist: formatTherapistForAdmin(assignment.therapist),
 });

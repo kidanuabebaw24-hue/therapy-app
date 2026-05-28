@@ -1,6 +1,7 @@
 import { UserRepository } from '../repositories/userRepository.js';
 import { sendSuccess, sendError } from '../utils/responseHelper.js';
 import prisma from '../config/prisma.js';
+import { formatPatientForTherapist } from '../utils/formatAssignmentClient.js';
 
 export const getProfile = async (req, res) => {
   try {
@@ -112,6 +113,7 @@ export const getClients = async (req, res) => {
       include: {
         user: {
           select: {
+            id: true,
             name: true,
             email: true,
             phone: true,
@@ -119,7 +121,10 @@ export const getClients = async (req, res) => {
         },
       },
     });
-    return sendSuccess(res, clients, 'Clients retrieved');
+
+    const formatted = clients.map(formatPatientForTherapist);
+
+    return sendSuccess(res, formatted, 'Clients retrieved');
   } catch (error) {
     return sendError(res, error.message, 500, error);
   }
