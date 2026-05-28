@@ -22,6 +22,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _ageController = TextEditingController();
+  final _emergencyNameController = TextEditingController();
+  final _emergencyPhoneController = TextEditingController();
+  final _emergencyRelationshipController = TextEditingController();
   final _passwordController = TextEditingController();
   String? _selectedGender;
   bool _isLoading = false;
@@ -31,6 +34,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _nameController.dispose();
     _emailController.dispose();
     _ageController.dispose();
+    _emergencyNameController.dispose();
+    _emergencyPhoneController.dispose();
+    _emergencyRelationshipController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -48,6 +54,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             password: _passwordController.text,
             age: age,
             gender: _selectedGender!,
+            emergencyContactName: _emergencyNameController.text,
+            emergencyContactPhone: _emergencyPhoneController.text,
+            emergencyContactRelationship:
+                _emergencyRelationshipController.text.trim().isEmpty
+                    ? null
+                    : _emergencyRelationshipController.text,
           );
 
       if (success && mounted) {
@@ -143,6 +155,37 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             onChanged: (value) =>
                                 setState(() => _selectedGender = value),
                             validator: RegisterValidators.validateGender,
+                          ),
+                          const SizedBox(height: 24),
+                          Text(
+                            'Emergency Contact',
+                            style: AppTextStyles.titleMedium.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          AuthTextField(
+                            controller: _emergencyNameController,
+                            hintText: 'Contact full name',
+                            prefixIcon: Icons.contact_emergency_outlined,
+                            inputFormatters: RegisterValidators.nameInputFormatters,
+                            validator: RegisterValidators.validateName,
+                          ),
+                          const SizedBox(height: 20),
+                          AuthTextField(
+                            controller: _emergencyPhoneController,
+                            hintText: 'Contact phone number',
+                            prefixIcon: Icons.phone_outlined,
+                            keyboardType: TextInputType.phone,
+                            validator: RegisterValidators.validatePhone,
+                          ),
+                          const SizedBox(height: 20),
+                          AuthTextField(
+                            controller: _emergencyRelationshipController,
+                            hintText: 'Relationship (e.g. Parent, Spouse)',
+                            prefixIcon: Icons.family_restroom_outlined,
+                            inputFormatters: RegisterValidators.nameInputFormatters,
+                            validator: RegisterValidators.validateRelationship,
                           ),
                           const SizedBox(height: 20),
                           AuthTextField(

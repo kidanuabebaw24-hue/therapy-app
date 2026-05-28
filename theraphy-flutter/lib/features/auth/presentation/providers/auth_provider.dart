@@ -147,6 +147,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required String password,
     required int age,
     required String gender,
+    required String emergencyContactName,
+    required String emergencyContactPhone,
+    String? emergencyContactRelationship,
   }) async {
     state = state.copyWith(status: AuthStatus.loading, error: null);
     try {
@@ -158,6 +161,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
         'role': 'client',
         'age': age,
         'gender': gender,
+        'emergencyContactName': emergencyContactName.trim(),
+        'emergencyContactPhone': emergencyContactPhone.trim(),
+        if (emergencyContactRelationship != null &&
+            emergencyContactRelationship.trim().isNotEmpty)
+          'emergencyContactRelationship': emergencyContactRelationship.trim(),
       });
       
       print('📩 Register response received: ${response.statusCode}');

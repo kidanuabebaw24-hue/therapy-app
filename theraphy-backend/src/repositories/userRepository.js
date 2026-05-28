@@ -30,8 +30,37 @@ export class UserRepository {
   }
 
   static async create(data) {
-    const { role, age, gender, primaryPhobia, currentAnxietyLevel, ...userData } = data;
-    
+    const {
+      role,
+      age,
+      gender,
+      primaryPhobia,
+      currentAnxietyLevel,
+      emergencyContactName,
+      emergencyContactPhone,
+      emergencyContactRelationship,
+      emergencyContact,
+      ...userData
+    } = data;
+
+    const ecName =
+      emergencyContact?.name ?? emergencyContactName;
+    const ecPhone =
+      emergencyContact?.phone ?? emergencyContactPhone;
+    const ecRelationship =
+      emergencyContact?.relationship ?? emergencyContactRelationship;
+
+    const emergencyContactsCreate =
+      ecName && ecPhone
+        ? {
+            create: {
+              name: ecName,
+              phone: ecPhone,
+              relationship: ecRelationship || null,
+            },
+          }
+        : undefined;
+
     return prisma.user.create({
       data: {
         ...userData,
@@ -42,6 +71,9 @@ export class UserRepository {
             gender,
             primaryPhobia,
             currentAnxietyLevel,
+            ...(emergencyContactsCreate
+              ? { emergencyContacts: emergencyContactsCreate }
+              : {}),
           }
         } : undefined,
         therapistProfile: role === 'therapist' ? {
