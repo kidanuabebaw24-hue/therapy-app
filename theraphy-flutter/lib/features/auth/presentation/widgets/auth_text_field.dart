@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 
@@ -9,6 +10,8 @@ class AuthTextField extends StatefulWidget {
   final bool isPassword;
   final TextInputType keyboardType;
   final String? Function(String?)? validator;
+  final List<TextInputFormatter>? inputFormatters;
+  final int? maxLength;
 
   const AuthTextField({
     super.key,
@@ -18,6 +21,8 @@ class AuthTextField extends StatefulWidget {
     this.isPassword = false,
     this.keyboardType = TextInputType.text,
     this.validator,
+    this.inputFormatters,
+    this.maxLength,
   });
 
   @override
@@ -33,6 +38,8 @@ class _AuthTextFieldState extends State<AuthTextField> {
       controller: widget.controller,
       obscureText: widget.isPassword ? _obscureText : false,
       keyboardType: widget.keyboardType,
+      inputFormatters: widget.inputFormatters,
+      maxLength: widget.maxLength,
       validator: widget.validator,
       style: AppTextStyles.bodyMedium,
       decoration: InputDecoration(

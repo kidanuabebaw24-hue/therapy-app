@@ -141,14 +141,23 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  Future<bool> register(String name, String email, String password) async {
+  Future<bool> register({
+    required String name,
+    required String email,
+    required String password,
+    required int age,
+    required String gender,
+  }) async {
     state = state.copyWith(status: AuthStatus.loading, error: null);
     try {
       print('🌐 Attempting registration for $email...');
       final response = await _apiClient.post(ApiConstants.register, data: {
-        'name': name,
-        'email': email,
+        'name': name.trim(),
+        'email': email.trim().toLowerCase(),
         'password': password,
+        'role': 'client',
+        'age': age,
+        'gender': gender,
       });
       
       print('📩 Register response received: ${response.statusCode}');

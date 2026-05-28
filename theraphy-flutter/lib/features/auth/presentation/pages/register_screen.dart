@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:theraphy_flutter/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
-import '../../../../routes/app_routes.dart';
 import '../widgets/auth_button.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/glass_card.dart';
+import '../utils/register_validators.dart';
 import 'package:theraphy_flutter/features/auth/presentation/providers/auth_provider.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -22,13 +22,21 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _ageController = TextEditingController();
   final _passwordController = TextEditingController();
+  String? _selectedGender;
   bool _isLoading = false;
+
+  static final _nameFormatters = [
+    FilteringTextInputFormatter.deny(RegExp(r'[0-9]')),
+    FilteringTextInputFormatter.allow(RegExp(r"[a-zA-Z\s'.-]")),
+  ];
 
   @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _ageController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -37,17 +45,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
-    
+
     try {
+      final age = int.parse(_ageController.text.trim());
       final success = await ref.read(authProvider.notifier).register(
-        _nameController.text,
-        _emailController.text,
-        _passwordController.text,
-      );
-      
+            name: _nameController.text,
+            email: _emailController.text,
+            password: _passwordController.text,
+            age: age,
+            gender: _selectedGender!,
+          );
+
       if (success && mounted) {
-        // The router will automatically redirect to the dashboard 
-        // because the auth state is now authenticated.
+        // Router redirects when auth state becomes authenticated.
       }
     } catch (e) {
       if (mounted) {
@@ -112,19 +122,35 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             controller: _nameController,
                             hintText: l10n.fullName,
                             prefixIcon: Icons.person_outline_rounded,
-                            validator: (val) => val == null || val.isEmpty
-                                ? l10n.enterYourName
-                                : null,
+                            inputFormatters: _nameFormatters,
+                            validator: RegisterValidators.validateName,
                           ),
                           const SizedBox(height: 20),
                           AuthTextField(
                             controller: _emailController,
-                            hintText: l10n.emailAddress,
+                            hintText: '${l10n.emailAddress} (@gmail.com)',
                             prefixIcon: Icons.email_outlined,
                             keyboardType: TextInputType.emailAddress,
-                            validator: (val) => val == null || !val.contains('@')
-                                ? l10n.invalidEmail
-                                : null,
+                            validator: RegisterValidators.validateGmail,
+                          ),
+                          const SizedBox(height: 20),
+                          AuthTextField(
+                            controller: _ageController,
+                            hintText: 'Age (18+)',
+                            prefixIcon: Icons.cake_outlined,
+                            keyboardType: TextInputType.number,
+                            maxLength: 3,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                            validator: RegisterValidators.validateAge,
+                          ),
+                          const SizedBox(height: 20),
+                          _GenderField(
+                            value: _selectedGender,
+                            onChanged: (value) =>
+                                setState(() => _selectedGender = value),
+                            validator: RegisterValidators.validateGender,
                           ),
                           const SizedBox(height: 20),
                           AuthTextField(
@@ -132,11 +158,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             hintText: l10n.password,
                             prefixIcon: Icons.lock_outline_rounded,
                             isPassword: true,
-                            validator: (val) => val == null || val.length < 6
-                                ? l10n.passwordMinLength
-                                : null,
+                            validator: RegisterValidators.validatePassword,
                           ),
-                          const SizedBox(height: 32),
+                          const SizedBox(height: 12),
+                          Text(
+                            'You must be 18 or older. Email must end with @gmail.com.',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.textHint,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
                           AuthButton(
                             text: l10n.signUp,
                             onPressed: _handleRegister,
@@ -161,7 +192,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
                       ),
                       TextButton(
-                        onPressed: () => context.pop(),
+                        onPressed: () => Navigator.of(context).pop(),
                         child: Text(
                           l10n.login,
                           style: const TextStyle(fontWeight: FontWeight.bold),
@@ -175,6 +206,54 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _GenderField extends StatelessWidget {
+  final String? value;
+  final ValueChanged<String?> onChanged;
+  final String? Function(String?)? validator;
+
+  const _GenderField({
+    required this.value,
+    required this.onChanged,
+    this.validator,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<String>(
+      value: value,
+      decoration: InputDecoration(
+        hintText: 'Gender',
+        prefixIcon: const Icon(Icons.wc_outlined, size: 22),
+        filled: true,
+        fillColor: Colors.white.withValues(alpha: 0.85),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: AppColors.surfaceVariant.withValues(alpha: 0.5)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppColors.error),
+        ),
+      ),
+      style: AppTextStyles.bodyMedium,
+      items: const [
+        DropdownMenuItem(value: 'male', child: Text('Male')),
+        DropdownMenuItem(value: 'female', child: Text('Female')),
+      ],
+      onChanged: onChanged,
+      validator: validator,
     );
   }
 }
