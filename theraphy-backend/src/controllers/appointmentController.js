@@ -4,9 +4,11 @@ import { TherapistRepository } from '../repositories/therapistRepository.js';
 import { sendSuccess, sendError } from '../utils/responseHelper.js';
 import prisma from '../config/prisma.js';
 import { createNotification } from '../utils/notificationHelper.js';
-
-const BLOCKING_STATUSES = ['pending_admin_approval', 'approved', 'scheduled', 'pending'];
-const PENDING_PAYMENT_HOLD_MINUTES = 15;
+import {
+  filterBlockingAppointments,
+  getAppointmentsBaseWhere,
+  getPendingPaymentCutoff,
+} from '../utils/appointmentBlocking.js';
 
 const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -97,18 +99,6 @@ const getWorkingWindowMinutes = (workingHours, appointmentDay) => {
   return end > start ? { start, end } : null;
 };
 
-const getBlockingWhereClause = (therapistId, excludeAppointmentId, pendingPaymentCutoff) => ({
-  therapistId,
-  ...(excludeAppointmentId ? { id: { not: excludeAppointmentId } } : {}),
-  OR: [
-    { status: { in: BLOCKING_STATUSES } },
-    {
-      status: 'pending_payment',
-      createdAt: { gte: pendingPaymentCutoff },
-    },
-  ],
-});
-
 const SLOT_STEP_MINUTES = 30;
 
 const listAvailableSlots = ({
@@ -184,12 +174,12 @@ const getDayAvailabilityContext = async ({
   const localMeta = getLocalDateMeta(anchorTime, offset);
   const normalizedDay = normalizeDayName(appointmentDay) || localMeta.weekday;
   const workingWindow = getWorkingWindowMinutes(therapist.workingHours, normalizedDay);
-  const pendingPaymentCutoff = new Date(Date.now() - PENDING_PAYMENT_HOLD_MINUTES * 60000);
+  const pendingPaymentCutoff = getPendingPaymentCutoff();
   const dayWindow = getDailyUtcWindow(anchorTime, offset);
 
-  const dayAppointments = await prisma.appointment.findMany({
+  const rawDayAppointments = await prisma.appointment.findMany({
     where: {
-      ...getBlockingWhereClause(therapistId, excludeAppointmentId, pendingPaymentCutoff),
+      ...getAppointmentsBaseWhere(therapistId, excludeAppointmentId),
       date: {
         gte: dayWindow.startUtc,
         lt: dayWindow.endUtc,
@@ -198,6 +188,10 @@ const getDayAvailabilityContext = async ({
     select: { id: true, date: true, duration: true, status: true, createdAt: true },
     orderBy: { date: 'asc' },
   });
+  const dayAppointments = filterBlockingAppointments(
+    rawDayAppointments,
+    pendingPaymentCutoff,
+  );
 
   const schedule = Array.isArray(therapist.workingHours)
     ? therapist.workingHours.find(
@@ -270,12 +264,12 @@ const checkTherapistAvailability = async ({
   const localMeta = getLocalDateMeta(startTime, timezoneOffsetMinutes);
   const normalizedDay = normalizeDayName(appointmentDay) || localMeta.weekday;
   const workingWindow = getWorkingWindowMinutes(therapist.workingHours, normalizedDay);
-  const pendingPaymentCutoff = new Date(Date.now() - PENDING_PAYMENT_HOLD_MINUTES * 60000);
+  const pendingPaymentCutoff = getPendingPaymentCutoff();
   const dayWindow = getDailyUtcWindow(startTime, timezoneOffsetMinutes);
 
-  const dayAppointments = await prisma.appointment.findMany({
+  const rawDayAppointments = await prisma.appointment.findMany({
     where: {
-      ...getBlockingWhereClause(therapistId, excludeAppointmentId, pendingPaymentCutoff),
+      ...getAppointmentsBaseWhere(therapistId, excludeAppointmentId),
       date: {
         gte: dayWindow.startUtc,
         lt: dayWindow.endUtc,
@@ -284,6 +278,10 @@ const checkTherapistAvailability = async ({
     select: { id: true, date: true, duration: true, status: true, createdAt: true },
     orderBy: { date: 'asc' },
   });
+  const dayAppointments = filterBlockingAppointments(
+    rawDayAppointments,
+    pendingPaymentCutoff,
+  );
 
   const worksAtThatTime = isWithinWorkingHours(therapist.workingHours, startTime, duration, {
     appointmentDay: normalizedDay,
@@ -305,13 +303,14 @@ const checkTherapistAvailability = async ({
   }
 
   const bookingEnd = new Date(startTime.getTime() + duration * 60000);
-  const existing = await prisma.appointment.findMany({
+  const rawExisting = await prisma.appointment.findMany({
     where: {
-      ...getBlockingWhereClause(therapistId, excludeAppointmentId, pendingPaymentCutoff),
+      ...getAppointmentsBaseWhere(therapistId, excludeAppointmentId),
       date: { lt: bookingEnd },
     },
     select: { id: true, date: true, duration: true, status: true, createdAt: true },
   });
+  const existing = filterBlockingAppointments(rawExisting, pendingPaymentCutoff);
 
   const overlap = existing.some((appointment) => {
     const existingStart = new Date(appointment.date);

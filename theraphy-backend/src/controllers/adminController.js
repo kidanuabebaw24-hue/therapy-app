@@ -1,6 +1,11 @@
 import prisma from '../config/prisma.js';
 import { sendSuccess, sendError } from '../utils/responseHelper.js';
 import { createNotification } from '../utils/notificationHelper.js';
+import {
+  filterBlockingAppointments,
+  getAppointmentsBaseWhere,
+  getPendingPaymentCutoff,
+} from '../utils/appointmentBlocking.js';
 
 export const getSystemStats = async (req, res) => {
   try {
@@ -120,13 +125,17 @@ export const approveBooking = async (req, res) => {
     }
 
     // Check therapist availability in-memory across active appointments
-    const activeAppointments = await prisma.appointment.findMany({
+    const rawActiveAppointments = await prisma.appointment.findMany({
       where: {
-        therapistId: appointment.therapistId,
-        id: { not: id },
-        status: { in: ['approved', 'pending_admin_approval', 'scheduled'] },
-      }
+        ...getAppointmentsBaseWhere(appointment.therapistId, id),
+      },
     });
+    const activeAppointments = filterBlockingAppointments(
+      rawActiveAppointments,
+      getPendingPaymentCutoff(),
+    ).filter((other) =>
+      ['approved', 'pending_admin_approval', 'scheduled', 'pending'].includes(other.status),
+    );
 
     const start = new Date(appointment.date).getTime();
     const end = start + appointment.duration * 60000;
