@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:theraphy_flutter/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -26,11 +25,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _passwordController = TextEditingController();
   String? _selectedGender;
   bool _isLoading = false;
-
-  static final _nameFormatters = [
-    FilteringTextInputFormatter.deny(RegExp(r'[0-9]')),
-    FilteringTextInputFormatter.allow(RegExp(r"[a-zA-Z\s'.-]")),
-  ];
 
   @override
   void dispose() {
@@ -122,7 +116,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             controller: _nameController,
                             hintText: l10n.fullName,
                             prefixIcon: Icons.person_outline_rounded,
-                            inputFormatters: _nameFormatters,
+                            inputFormatters: RegisterValidators.nameInputFormatters,
                             validator: RegisterValidators.validateName,
                           ),
                           const SizedBox(height: 20),
@@ -140,9 +134,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             prefixIcon: Icons.cake_outlined,
                             keyboardType: TextInputType.number,
                             maxLength: 3,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                            ],
+                            inputFormatters: RegisterValidators.ageInputFormatters,
                             validator: RegisterValidators.validateAge,
                           ),
                           const SizedBox(height: 20),

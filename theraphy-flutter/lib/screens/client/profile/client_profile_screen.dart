@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:theraphy_flutter/features/auth/presentation/utils/register_validators.dart';
 import 'package:theraphy_flutter/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -488,16 +490,16 @@ class _ContactSheetState extends ConsumerState<_ContactSheet> {
     bool success;
     if (widget.contact == null) {
       success = await ref.read(authProvider.notifier).addEmergencyContact(
-            name: _nameController.text,
-            phone: _phoneController.text,
-            relationship: _relationshipController.text,
+            name: _nameController.text.trim(),
+            phone: _phoneController.text.trim(),
+            relationship: _relationshipController.text.trim(),
           );
     } else {
       success = await ref.read(authProvider.notifier).updateEmergencyContact(
             contactId: widget.contact!.id,
-            name: _nameController.text,
-            phone: _phoneController.text,
-            relationship: _relationshipController.text,
+            name: _nameController.text.trim(),
+            phone: _phoneController.text.trim(),
+            relationship: _relationshipController.text.trim(),
           );
     }
 
@@ -549,12 +551,13 @@ class _ContactSheetState extends ConsumerState<_ContactSheet> {
                 const SizedBox(height: 24),
                 TextFormField(
                   controller: _nameController,
+                  inputFormatters: RegisterValidators.nameInputFormatters,
                   decoration: InputDecoration(
                     labelText: l10n.fullName,
                     prefixIcon: const Icon(Icons.person_outline),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  validator: (val) => val == null || val.isEmpty ? l10n.required : null,
+                  validator: RegisterValidators.validateName,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -565,17 +568,19 @@ class _ContactSheetState extends ConsumerState<_ContactSheet> {
                     prefixIcon: const Icon(Icons.phone_outlined),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  validator: (val) => val == null || val.isEmpty ? l10n.required : null,
+                  validator: RegisterValidators.validatePhone,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _relationshipController,
+                  inputFormatters: RegisterValidators.nameInputFormatters,
                   decoration: InputDecoration(
                     labelText: l10n.relationship,
                     hintText: l10n.relationshipHint,
                     prefixIcon: const Icon(Icons.family_restroom),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
+                  validator: RegisterValidators.validateRelationship,
                 ),
                 const SizedBox(height: 32),
                 AppButton(
