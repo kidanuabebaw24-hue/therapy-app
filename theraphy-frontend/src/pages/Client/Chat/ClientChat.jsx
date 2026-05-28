@@ -18,12 +18,13 @@ import { getMyTherapist } from '../../../services/clientApi';
 import {
   getConversationMessages,
   markMessagesAsRead,
+  sendChatMessage,
 } from '../../../services/chatApi';
 import './ClientChat.css';
 
 const ClientChat = () => {
   const navigate = useNavigate();
-  const { socket, isConnected } = useSocket();
+  const { socket, isConnected, connectionError, reconnect } = useSocket();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [therapist, setTherapist] = useState(null);
@@ -45,9 +46,12 @@ const ClientChat = () => {
   }, []);
 
   useEffect(() => {
-    if (conversationId && isConnected && socket) {
+    if (!conversationId) return undefined;
+
+    loadMessages();
+
+    if (isConnected && socket) {
       joinConversation();
-      loadMessages();
       setupSocketListeners();
     }
 
@@ -57,9 +61,16 @@ const ClientChat = () => {
         socket.off('user-typing');
         socket.off('messages-read');
         socket.off('conversation-joined');
+        socket.off('message-sent');
       }
     };
   }, [conversationId, isConnected, socket]);
+
+  useEffect(() => {
+    if (!conversationId || isConnected) return undefined;
+    const interval = setInterval(loadMessages, 4000);
+    return () => clearInterval(interval);
+  }, [conversationId, isConnected]);
 
   useEffect(() => {
     scrollToBottom();
@@ -162,13 +173,29 @@ const ClientChat = () => {
     setNewMessage('');
     setSending(true);
 
-    socket.emit('send-message', {
-      receiverId: therapist.userId,
-      message: messageContent,
-      conversationId,
-    });
-
-    setSending(false);
+    try {
+      if (isConnected && socket) {
+        socket.emit('send-message', {
+          receiverId: therapist.userId,
+          message: messageContent,
+          conversationId,
+        });
+      } else {
+        const sent = await sendChatMessage({
+          receiverId: therapist.userId,
+          message: messageContent,
+          conversationId,
+        });
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === sent.id)) return prev;
+          return [...prev, sent];
+        });
+      }
+    } catch {
+      toast.error('Failed to send message');
+    } finally {
+      setSending(false);
+    }
   };
 
   const handleTyping = () => {
@@ -215,6 +242,15 @@ const ClientChat = () => {
 
   return (
     <div className="client-chat">
+      {!isConnected && (
+        <div className="chat-connection-banner">
+          <span>
+            Live connection unavailable — messages refresh every few seconds.
+            {connectionError ? ` (${connectionError})` : ''}
+          </span>
+          <button type="button" onClick={reconnect}>Retry live</button>
+        </div>
+      )}
       {/* Chat Header */}
       <div className="chat-header">
         <button className="back-btn" onClick={() => navigate('/client/dashboard')}>
@@ -277,7 +313,7 @@ const ClientChat = () => {
                   </div>
                 )}
                 <div className="message-content">
-                  <p>{msg.message}</p>
+                  <p>{msg.message || msg.content}</p>
                   <div className="message-meta">
                     <span className="message-time">
                       {formatTime(msg.createdAt)}
@@ -325,7 +361,7 @@ const ClientChat = () => {
           onKeyUp={handleTyping}
           placeholder="Type your message..."
           className="message-input"
-          disabled={!isConnected}
+          disabled={sending}
         />
         
         <button type="button" className="emoji-btn">
@@ -335,7 +371,7 @@ const ClientChat = () => {
         <button
           type="submit"
           className={`send-btn ${sending ? 'sending' : ''}`}
-          disabled={!newMessage.trim() || !isConnected || sending}
+          disabled={!newMessage.trim() || sending}
         >
           {sending ? <Clock size={20} /> : <Send size={20} />}
         </button>

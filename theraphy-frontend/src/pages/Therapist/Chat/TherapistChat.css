@@ -1,3 +1,33 @@
+.chat-connection-banner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px;
+  background: #fff8e6;
+  border-bottom: 1px solid #f0d78c;
+  font-size: 13px;
+  color: #8a6d00;
+}
+
+.chat-connection-banner .retry-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 6px;
+  background: #0054a6;
+  color: white;
+  cursor: pointer;
+  font-size: 12px;
+}
+
 .therapist-chat {
   display: flex;
   height: calc(100vh - 80px);

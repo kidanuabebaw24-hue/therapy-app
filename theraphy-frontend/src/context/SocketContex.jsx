@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { getCurrentUser } from '../services/auth';
 
@@ -12,68 +12,78 @@ export const useSocket = () => {
   return context;
 };
 
+const resolveSocketUrl = () => {
+  const configured = import.meta.env.VITE_SOCKET_URL;
+  if (configured) return configured.replace(/\/$/, '');
+
+  const api = import.meta.env.VITE_API_URL || '';
+  if (api.endsWith('/api')) return api.slice(0, -4);
+  return 'http://localhost:5000';
+};
+
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState(null);
+  const [connectAttempt, setConnectAttempt] = useState(0);
+
+  const reconnect = useCallback(() => {
+    setConnectAttempt((n) => n + 1);
+  }, []);
 
   useEffect(() => {
-    const user = getCurrentUser();;
-    
-    if (!user?.token) {
-      return;
+    const user = getCurrentUser();
+    const token = localStorage.getItem('token') || user?.token;
+
+    if (!token) {
+      setConnectionError('Not signed in');
+      return undefined;
     }
 
-    const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
-    
+    const SOCKET_URL = resolveSocketUrl();
+
     const newSocket = io(SOCKET_URL, {
-      auth: { token: user.token },
-      transports: ['websocket', 'polling'],
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      timeout: 10000,
+      auth: { token },
+      query: { token },
+      transports: ['polling', 'websocket'],
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1500,
+      timeout: 20000,
+      withCredentials: true,
     });
 
     newSocket.on('connect', () => {
       setIsConnected(true);
       setConnectionError(null);
-      if (user?.id) {
-        newSocket.emit('join', user.id);
+      const uid = getCurrentUser()?.id;
+      if (uid) {
+        newSocket.emit('join', uid);
       }
     });
 
     newSocket.on('connect_error', (error) => {
-      console.error(`❌ Socket connection error for ${user.role}:`, error.message);
+      console.error('Socket connect_error:', error.message);
       setIsConnected(false);
       setConnectionError(error.message);
-      
-      // Try to reconnect with polling only
-      if (error.message.includes('websocket')) {
-        newSocket.io.opts.transports = ['polling'];
-      }
     });
 
-    newSocket.on('disconnect', (reason) => {
+    newSocket.on('disconnect', () => {
       setIsConnected(false);
-    });
-
-    newSocket.on('error', (error) => {
-      console.error('❌ Socket error:', error);
     });
 
     setSocket(newSocket);
 
     return () => {
-      if (newSocket) {
-        newSocket.disconnect();
-      }
+      newSocket.disconnect();
     };
-  }, []);
+  }, [connectAttempt]);
 
   const value = {
     socket,
     isConnected,
     connectionError,
+    reconnect,
   };
 
   return (

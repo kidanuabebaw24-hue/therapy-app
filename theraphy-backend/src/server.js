@@ -2,6 +2,7 @@ import app from './app.js';
 import http from 'http';
 import { Server } from 'socket.io';
 import { registerChatSocket } from './socket/chatSocket.js';
+import { setIO } from './socket/ioInstance.js';
 
 const PORT = process.env.PORT || 5000;
 
@@ -20,6 +21,7 @@ const io = new Server(server, {
   },
 });
 
+setIO(io);
 registerChatSocket(io);
 
 server.listen(PORT, () => {

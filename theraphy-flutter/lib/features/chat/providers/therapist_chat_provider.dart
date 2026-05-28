@@ -128,6 +128,10 @@ class TherapistChatNotifier extends StateNotifier<TherapistChatState> {
         isLoading: false,
         socketReady: _socketService?.isConnected ?? false,
       );
+
+      if (!(_socketService?.isConnected ?? false)) {
+        _startRestPolling(conversationId);
+      }
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -168,16 +172,57 @@ class TherapistChatNotifier extends StateNotifier<TherapistChatState> {
 
   Future<void> sendMessage(String text) async {
     final therapist = state.therapist;
-    final socket = _socketService;
-    if (therapist == null || socket == null || text.trim().isEmpty) return;
+    if (therapist == null || text.trim().isEmpty) return;
 
     state = state.copyWith(isSending: true);
-    socket.sendMessage(
-      receiverId: therapist.userId,
-      message: text.trim(),
-      conversationId: therapist.conversationId,
-    );
-    state = state.copyWith(isSending: false);
+
+    try {
+      final socket = _socketService;
+      if (socket != null && socket.isConnected) {
+        socket.sendMessage(
+          receiverId: therapist.userId,
+          message: text.trim(),
+          conversationId: therapist.conversationId,
+        );
+      } else {
+        final api = _ref.read(apiClientProvider);
+        final res = await api.post(
+          ApiConstants.chatSendMessage,
+          data: {
+            'receiverId': therapist.userId,
+            'message': text.trim(),
+            'conversationId': therapist.conversationId,
+          },
+        );
+        final sent = res.data['data'] ?? res.data;
+        final msg = ChatMessageModel.fromJson(sent as Map<String, dynamic>);
+        if (!state.messages.any((m) => m.id == msg.id)) {
+          state = state.copyWith(messages: [...state.messages, msg]);
+        }
+      }
+    } finally {
+      state = state.copyWith(isSending: false);
+    }
+  }
+
+  void _startRestPolling(String conversationId) {
+    Future.doWhile(() async {
+      await Future.delayed(const Duration(seconds: 4));
+      if (state.therapist?.conversationId != conversationId) return false;
+      if (_socketService?.isConnected ?? false) return false;
+      try {
+        final api = _ref.read(apiClientProvider);
+        final messagesRes =
+            await api.get(ApiConstants.chatMessages(conversationId));
+        final payload = messagesRes.data['data'] ?? messagesRes.data;
+        final rawMessages = (payload['messages'] as List? ?? [])
+            .map((e) => ChatMessageModel.fromJson(e as Map<String, dynamic>))
+            .toList();
+        state = state.copyWith(messages: rawMessages);
+      } catch (_) {}
+      return state.therapist?.conversationId == conversationId &&
+          !(_socketService?.isConnected ?? false);
+    });
   }
 
   void setTyping(bool typing) {

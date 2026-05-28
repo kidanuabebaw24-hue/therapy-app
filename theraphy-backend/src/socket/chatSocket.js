@@ -1,13 +1,14 @@
 import jwt from 'jsonwebtoken';
 import prisma from '../config/prisma.js';
 import { UserRepository } from '../repositories/userRepository.js';
-import { formatChatMessage, buildConversationId } from '../utils/chatMessageFormatter.js';
+import { sendChatMessage } from '../services/chatMessageService.js';
 
 export const registerChatSocket = (io) => {
   io.use(async (socket, next) => {
     try {
       const token =
         socket.handshake.auth?.token ||
+        socket.handshake.query?.token ||
         socket.handshake.headers?.authorization?.replace('Bearer ', '');
 
       if (!token) {
@@ -25,6 +26,7 @@ export const registerChatSocket = (io) => {
       socket.userRole = user.role;
       next();
     } catch (err) {
+      console.error('Socket auth failed:', err.message);
       next(new Error('Invalid or expired token'));
     }
   });
@@ -52,50 +54,16 @@ export const registerChatSocket = (io) => {
 
     socket.on('send-message', async ({ receiverId, message, conversationId }) => {
       try {
-        const content = String(message || '').trim();
-        if (!content || !receiverId || !conversationId) {
-          socket.emit('error', 'Invalid message payload');
-          return;
-        }
-
-        if (!conversationId.includes(socket.userId)) {
-          socket.emit('error', 'Invalid conversation');
-          return;
-        }
-
-        const receiver = await prisma.user.findUnique({
-          where: { id: receiverId },
-          select: { id: true, role: true },
+        const formatted = await sendChatMessage({
+          senderId: socket.userId,
+          receiverId,
+          conversationId,
+          content: message,
         });
-
-        if (!receiver) {
-          socket.emit('error', 'Receiver not found');
-          return;
-        }
-
-        const saved = await prisma.chatMessage.create({
-          data: {
-            conversationId,
-            senderId: socket.userId,
-            receiverId,
-            content,
-            type: 'text',
-          },
-          include: {
-            sender: { select: { id: true, name: true, role: true } },
-            receiver: { select: { id: true, name: true, role: true } },
-          },
-        });
-
-        const formatted = formatChatMessage(saved);
-
-        io.to(conversationId).emit('new-message', formatted);
-        io.to(receiverId).emit('new-message', formatted);
-
         socket.emit('message-sent', formatted);
       } catch (err) {
         console.error('send-message error:', err);
-        socket.emit('error', 'Failed to send message');
+        socket.emit('error', err.message || 'Failed to send message');
       }
     });
 
@@ -131,5 +99,3 @@ export const registerChatSocket = (io) => {
     });
   });
 };
-
-export { buildConversationId };

@@ -25,12 +25,13 @@ import {
   getConversationMessages,
   getConversations,
   markMessagesAsRead,
+  sendChatMessage,
 } from '../../../services/chatApi';
 import './TherapistChat.css';
 
 const TherapistChat = () => {
   const navigate = useNavigate();
-  const { socket, isConnected, connectionError } = useSocket();
+  const { socket, isConnected, connectionError, reconnect } = useSocket();
   const [conversations, setConversations] = useState([]);
   const [activeConversation, setActiveConversation] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -57,31 +58,35 @@ const TherapistChat = () => {
   }, []);
 
   useEffect(() => {
-    console.log('🔄 Active conversation changed:', activeConversation);
-    console.log('📡 Socket status:', { isConnected, hasSocket: !!socket });
-    
-    if (activeConversation && isConnected && socket) {
-      console.log('✅ All conditions met, setting up conversation:', activeConversation.id);
+    if (!activeConversation) return undefined;
+
+    loadMessages(activeConversation.id);
+
+    if (isConnected && socket) {
       joinConversation();
-      loadMessages(activeConversation.id);
       setupSocketListeners();
-    } else {
-      console.log('❌ Cannot join conversation - missing requirements:', {
-        hasActiveConversation: !!activeConversation,
-        isConnected,
-        hasSocket: !!socket
-      });
     }
 
     return () => {
-      console.log('🧹 Cleaning up chat component');
       if (socket) {
         socket.off('new-message');
         socket.off('user-typing');
         socket.off('messages-read');
+        socket.off('message-sent');
       }
     };
-  }, [activeConversation, isConnected, socket]);
+  }, [activeConversation?.id, isConnected, socket]);
+
+  // Poll messages when socket is down (REST fallback)
+  useEffect(() => {
+    if (!activeConversation || isConnected) return undefined;
+
+    const interval = setInterval(() => {
+      loadMessages(activeConversation.id);
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [activeConversation?.id, isConnected]);
 
   useEffect(() => {
     scrollToBottom();
@@ -218,20 +223,35 @@ const TherapistChat = () => {
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!newMessage.trim() || !activeConversation || sending || !isConnected) return;
+    if (!newMessage.trim() || !activeConversation || sending) return;
 
     const messageContent = newMessage.trim();
     setNewMessage('');
     setSending(true);
 
-    console.log('📤 Sending message to:', activeConversation.participant.id);
-    socket.emit('send-message', {
-      receiverId: activeConversation.participant.id,
-      message: messageContent,
-      conversationId: activeConversation.id,
-    });
-
-    setSending(false);
+    try {
+      if (isConnected && socket) {
+        socket.emit('send-message', {
+          receiverId: activeConversation.participant.id,
+          message: messageContent,
+          conversationId: activeConversation.id,
+        });
+      } else {
+        const sent = await sendChatMessage({
+          receiverId: activeConversation.participant.id,
+          message: messageContent,
+          conversationId: activeConversation.id,
+        });
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === sent.id)) return prev;
+          return [...prev, sent];
+        });
+      }
+    } catch (err) {
+      toast.error('Failed to send message');
+    } finally {
+      setSending(false);
+    }
   };
 
   const handleTyping = () => {
@@ -250,7 +270,8 @@ const TherapistChat = () => {
   };
 
   const handleRetry = () => {
-    setRetryCount(prev => prev + 1);
+    setRetryCount((prev) => prev + 1);
+    reconnect();
     fetchConversations();
   };
 
@@ -288,24 +309,20 @@ const TherapistChat = () => {
     );
   }
 
-  if (!isConnected) {
-    return (
-      <div className="therapist-chat-loading">
-        <div className="connection-error">
-          <MessageCircle size={48} />
-          <h3>Connection Error</h3>
-          <p>{connectionError || 'Unable to connect to chat server'}</p>
-          <button className="retry-btn" onClick={handleRetry}>
-            <RefreshCw size={16} />
-            Retry Connection
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="therapist-chat">
+      {!isConnected && (
+        <div className="chat-connection-banner">
+          <span>
+            Live connection unavailable — using REST mode.
+            {connectionError ? ` (${connectionError})` : ''}
+          </span>
+          <button type="button" className="retry-btn" onClick={handleRetry}>
+            <RefreshCw size={14} />
+            Retry
+          </button>
+        </div>
+      )}
       {/* Sidebar Toggle for Mobile */}
       <button
         className={`sidebar-toggle ${!sidebarOpen ? 'closed' : ''}`}
@@ -461,7 +478,7 @@ const TherapistChat = () => {
                         </div>
                       )}
                       <div className="message-content">
-                        <p>{msg.message}</p>
+                        <p>{msg.message || msg.content}</p>
                         <div className="message-meta">
                           <span className="message-time">
                             {formatTime(msg.createdAt)}
@@ -511,7 +528,7 @@ const TherapistChat = () => {
                 onKeyUp={handleTyping}
                 placeholder="Type your message..."
                 className="message-input"
-                disabled={!isConnected}
+                disabled={sending}
               />
               
               <button type="button" className="emoji-btn">
@@ -521,7 +538,7 @@ const TherapistChat = () => {
               <button
                 type="submit"
                 className={`send-btn ${sending ? 'sending' : ''}`}
-                disabled={!newMessage.trim() || !isConnected || sending}
+                disabled={!newMessage.trim() || sending}
               >
                 {sending ? <Clock size={20} /> : <Send size={20} />}
               </button>

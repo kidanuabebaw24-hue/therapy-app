@@ -26,6 +26,15 @@ export const markMessagesAsRead = async (conversationId) => {
   return unwrap(res.data);
 };
 
+export const sendChatMessage = async ({ receiverId, message, conversationId }) => {
+  const res = await api.post('/chat/messages', {
+    receiverId,
+    message,
+    conversationId,
+  });
+  return unwrap(res.data);
+};
+
 export const getUnreadCount = async () => {
   const res = await api.get('/chat/unread');
   return unwrap(res.data);

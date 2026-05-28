@@ -35,6 +35,7 @@ class ApiConstants {
       '/chat/messages/$conversationId';
   static String chatMarkRead(String conversationId) =>
       '/chat/messages/read/$conversationId';
+  static const String chatSendMessage = '/chat/messages';
 
   // Mood & Progress
   static const String moods = '/moods';

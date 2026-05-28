@@ -1,6 +1,7 @@
 import prisma from '../config/prisma.js';
 import { sendSuccess, sendError } from '../utils/responseHelper.js';
 import { formatChatMessage, buildConversationId } from '../utils/chatMessageFormatter.js';
+import { sendChatMessage as persistChatMessage } from '../services/chatMessageService.js';
 
 const formatLastMessage = (msg) =>
   msg
@@ -157,6 +158,21 @@ export const getConversationMessages = async (req, res) => {
     );
   } catch (error) {
     return sendError(res, error.message, 500, error);
+  }
+};
+
+export const postChatMessage = async (req, res) => {
+  try {
+    const { receiverId, message, conversationId } = req.body;
+    const formatted = await persistChatMessage({
+      senderId: req.user.id,
+      receiverId,
+      conversationId,
+      content: message,
+    });
+    return sendSuccess(res, formatted, 'Message sent', 201);
+  } catch (error) {
+    return sendError(res, error.message, 400, error);
   }
 };
 
