@@ -1,52 +1,33 @@
 import api from "./api";
-import * as mockData from "./mockData";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-const USE_MOCK = import.meta.env.VITE_USE_MOCK_DATA === "true";
+/**
+ * Backend response shape:
+ *   { success: true, data: { user: {...}, token: "..." }, message: "..." }
+ */
 
 export const login = async (credentials) => {
-  try {
-    if (USE_MOCK) {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      const data = { user: mockData.mockUser, token: "mock_token_123" };
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-      return data;
-    }
-    const response = await api.post(`/auth/login`, credentials);
-    const data = response.data;
+  const response = await api.post("/auth/login", credentials);
+  // Unwrap the nested data envelope
+  const payload = response.data?.data ?? response.data;
+  const token = payload.token;
+  const user = payload.user ?? payload;
 
-    if (data.token) {
-      localStorage.setItem("token", data.token);
-    }
+  if (token) localStorage.setItem("token", token);
+  if (user) localStorage.setItem("user", JSON.stringify({ ...user, token }));
 
-    const userData = data.user || data;
-    if (userData) {
-      localStorage.setItem("user", JSON.stringify(userData));
-    }
-  
-    return data;
-  } catch (error) {
-    console.error("Login service error:", error);
-    throw error;
-  }
+  return { token, user };
 };
 
 export const register = async (userData) => {
-  try {
-    if (USE_MOCK) {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      const data = { user: mockData.mockUser, token: "mock_token_123" };
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-      return data;
-    }
-    const response = await api.post(`/auth/register`, userData);
-    return response.data;
-  } catch (error) {
-    console.error("Registration service error:", error);
-    throw error;
-  }
+  const response = await api.post("/auth/register", userData);
+  const payload = response.data?.data ?? response.data;
+  const token = payload.token;
+  const user = payload.user ?? payload;
+
+  if (token) localStorage.setItem("token", token);
+  if (user) localStorage.setItem("user", JSON.stringify({ ...user, token }));
+
+  return { token, user };
 };
 
 export const logout = () => {
@@ -56,18 +37,14 @@ export const logout = () => {
 
 export const getCurrentUser = () => {
   try {
-    const user = localStorage.getItem("user");
-    return user ? JSON.parse(user) : null;
-  } catch (error) {
-    console.error("Error parsing user from localStorage:", error);
+    const raw = localStorage.getItem("user");
+    return raw ? JSON.parse(raw) : null;
+  } catch {
     return null;
   }
 };
 
-export const isAuthenticated = () => {
-  return !!localStorage.getItem("token");
-};
+export const isAuthenticated = () => !!localStorage.getItem("token");
 
-export const AuthProvider = ({ children }) => {
-  return children;
-};
+// Dummy provider export kept for compatibility with App.jsx import
+export const AuthProvider = ({ children }) => children;

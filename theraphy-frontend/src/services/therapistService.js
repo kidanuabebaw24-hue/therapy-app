@@ -7,24 +7,39 @@ export const getAvailableTherapists = async (filters = {}) => {
   if (filters.minExperience) params.append("minExperience", filters.minExperience);
   if (filters.maxRate) params.append("maxRate", filters.maxRate);
   
-  const response = await api.get(`/therapists/available?${params}`);
-  return response.data;
+  const response = await api.get(`/therapists?${params}`);
+  const therapists = response.data?.data || [];
+  return {
+    therapists: therapists.map((therapist) => ({
+      ...therapist,
+      name: therapist.user?.name || therapist.name,
+      email: therapist.user?.email || therapist.email,
+      phone: therapist.user?.phone || therapist.phone,
+    })),
+  };
 };
 
 // Get single therapist details
 export const getTherapistDetails = async (therapistId) => {
   const response = await api.get(`/therapists/${therapistId}`);
-  return response.data;
+  const therapist = response.data?.data || null;
+  if (!therapist) return null;
+  return {
+    ...therapist,
+    name: therapist.user?.name || therapist.name,
+    email: therapist.user?.email || therapist.email,
+    phone: therapist.user?.phone || therapist.phone,
+  };
 };
 
-// Request to book a therapist
+// Request to book a therapist (creates a BookingRequest)
 export const requestTherapistBooking = async (data) => {
-  const response = await api.post("/therapists/book", data);
+  const response = await api.post("/booking", data);
   return response.data;
 };
 
 // Get all specializations
 export const getSpecializations = async () => {
   const response = await api.get("/therapists/specializations");
-  return response.data;
+  return { specializations: response.data?.data || [] };
 };

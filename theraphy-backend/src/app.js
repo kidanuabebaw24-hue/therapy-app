@@ -17,6 +17,8 @@ import reportRoutes from './routes/reportRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
 import therapistAssignmentRoutes from './routes/therapistAssignmentRoutes.js';
 import progressRoutes from './routes/progressRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 import morgan from 'morgan';
 import { sendError } from './utils/responseHelper.js';
 
@@ -25,7 +27,16 @@ dotenv.config();
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: [
+    process.env.FRONTEND_URL || 'http://localhost:5173',
+    'http://localhost:3000',
+    'http://localhost:5174',
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 app.use(express.json());
 app.use(morgan('dev'));
 
@@ -47,6 +58,8 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/booking', bookingRoutes);
 app.use('/api/assignments', therapistAssignmentRoutes);
 app.use('/api/progress', progressRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/', (req, res) => {
   res.send('Theraphy API (PostgreSQL/Prisma) is running');

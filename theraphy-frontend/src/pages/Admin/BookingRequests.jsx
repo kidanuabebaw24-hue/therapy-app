@@ -4,7 +4,6 @@ import {
   getAllBookingRequests,
   approveBookingRequest,
   rejectBookingRequest,
-  getBookingRequestById,
 } from '../../services/bookingService';
 import toast from 'react-hot-toast';
 import './BookingRequests.css';
@@ -28,7 +27,15 @@ const BookingRequests = () => {
     try {
       setLoading(true);
       const response = await getAllBookingRequests(filter);
-      setRequests(response.data);
+      const rows = response?.data ?? response ?? [];
+      const mappedRequests = rows.map(req => ({
+        ...req,
+        client: req.patient?.user || {},
+        therapist: req.therapist?.user || {},
+        preferredDate: req.date,
+        message: req.notes || '',
+      }));
+      setRequests(mappedRequests);
     } catch (error) {
       console.error('Error fetching requests:', error);
       toast.error('Failed to load requests');
@@ -38,13 +45,12 @@ const BookingRequests = () => {
   };
 
   const handleViewDetails = async (requestId) => {
-    try {
-      const response = await getBookingRequestById(requestId);
-      setSelectedRequest(response.data);
+    const req = requests.find(r => r.id === requestId);
+    if (req) {
+      setSelectedRequest(req);
       setShowModal(true);
-    } catch (error) {
-      console.error('Error fetching request details:', error);
-      toast.error('Failed to load request details');
+    } else {
+      toast.error('Request not found');
     }
   };
 

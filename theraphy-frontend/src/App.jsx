@@ -48,7 +48,8 @@ import AIChat from "./pages/Client/AIChat/AIChat";
 import Therapists from "./pages/Client/Theraphists/Therapists.jsx";
 
 // Context and Services
-import { AuthProvider, getCurrentUser, isAuthenticated } from "./services/auth";
+import { getCurrentUser, isAuthenticated } from "./services/auth";
+import { AuthProvider } from "./context/AuthContext.jsx";
 import { SocketProvider } from "./context/SocketContex.jsx";
 
 // Route Protection Components

@@ -1,43 +1,59 @@
 import api from "./api";
 
-// Client: Create a booking request
-export const createBookingRequest = async (data) => {
-  const response = await api.post("/booking-requests", data);
-  return response.data;
+// ── Client ─────────────────────────────────────────────────────────────────────
+
+/** POST /booking — client creates a booking request */
+export const createBookingRequest = (data) =>
+  api.post("/booking", data).then((res) => res.data);
+
+/** GET /booking/my — client's own booking requests */
+export const getMyBookingRequests = () =>
+  api.get("/booking/my").then((res) => res.data);
+
+/** PATCH /booking/:id/cancel — client cancels a request */
+export const cancelBookingRequest = (requestId) =>
+  api.patch(`/booking/${requestId}/cancel`).then((res) => res.data);
+
+// ── Admin ──────────────────────────────────────────────────────────────────────
+
+/**
+ * GET /admin/bookings?status=...
+ */
+export const getAllBookingRequests = (status = "all") => {
+  const params = status && status !== "all" ? { status } : undefined;
+  return api
+    .get("/admin/bookings", { params })
+    .then((res) => res.data)
+    .catch((error) => {
+      // Backward-compatible fallback for older deployed backend versions
+      if (error?.response?.status === 404) {
+        const legacyUrl = status === "pending" ? "/booking/pending" : "/booking";
+        return api.get(legacyUrl).then((res) => res.data);
+      }
+      throw error;
+    });
 };
 
-// Client: Get my booking requests
-export const getMyBookingRequests = async () => {
-  const response = await api.get("/booking-requests/my");
-  return response.data;
-};
+/** PUT /admin/bookings/:id/approve — admin approves */
+export const approveBookingRequest = (requestId, adminNotes) =>
+  api
+    .put(`/admin/bookings/${requestId}/approve`, { adminNotes })
+    .then((res) => res.data)
+    .catch((error) => {
+      if (error?.response?.status === 404) {
+        return api.patch(`/booking/${requestId}/approve`, { adminNotes }).then((res) => res.data);
+      }
+      throw error;
+    });
 
-// Client: Cancel booking request
-export const cancelBookingRequest = async (requestId) => {
-  const response = await api.put(`/booking-requests/${requestId}/cancel`);
-  return response.data;
-};
-
-// Admin: Get all booking requests
-export const getAllBookingRequests = async (status = "all") => {
-  const response = await api.get(`/booking-requests/admin/all?status=${status}`);
-  return response.data;
-};
-
-// Admin: Get booking request by ID
-export const getBookingRequestById = async (requestId) => {
-  const response = await api.get(`/booking-requests/admin/${requestId}`);
-  return response.data;
-};
-
-// Admin: Approve booking request
-export const approveBookingRequest = async (requestId, adminNotes) => {
-  const response = await api.put(`/booking-requests/admin/${requestId}/approve`, { adminNotes });
-  return response.data;
-};
-
-// Admin: Reject booking request
-export const rejectBookingRequest = async (requestId, rejectionReason) => {
-  const response = await api.put(`/booking-requests/admin/${requestId}/reject`, { rejectionReason });
-  return response.data;
-};
+/** PUT /admin/bookings/:id/reject — admin rejects */
+export const rejectBookingRequest = (requestId, rejectionReason) =>
+  api
+    .put(`/admin/bookings/${requestId}/reject`, { rejectionReason })
+    .then((res) => res.data)
+    .catch((error) => {
+      if (error?.response?.status === 404) {
+        return api.patch(`/booking/${requestId}/reject`, { rejectionReason }).then((res) => res.data);
+      }
+      throw error;
+    });
