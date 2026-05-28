@@ -8,9 +8,21 @@
  */
 import dotenv from 'dotenv';
 import bcrypt from 'bcryptjs';
-import prisma from './src/config/prisma.js';
+import pg from 'pg';
+import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
 
 dotenv.config();
+
+const connectionString =
+  process.env.NEON_DATABASE_URL || process.env.DATABASE_URL;
+
+if (!connectionString) {
+  throw new Error('Set DATABASE_URL or NEON_DATABASE_URL in .env');
+}
+
+const pool = new pg.Pool({ connectionString });
+const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 
 const THERAPIST_PASSWORD = 'Therapist@123';
 const ADMIN_PASSWORD = 'Admin@123';
@@ -198,4 +210,5 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect();
+    await pool.end();
   });
