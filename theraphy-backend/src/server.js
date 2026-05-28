@@ -3,6 +3,7 @@ import http from 'http';
 import { Server } from 'socket.io';
 import { registerChatSocket } from './socket/chatSocket.js';
 import { setIO } from './socket/ioInstance.js';
+import { ensureAppointmentStatusEnum } from './bootstrap/ensureAppointmentStatusEnum.js';
 
 const PORT = process.env.PORT || 5000;
 
@@ -24,8 +25,19 @@ const io = new Server(server, {
 setIO(io);
 registerChatSocket(io);
 
-server.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT} (HTTP + Socket.io chat)`);
-});
+async function start() {
+  try {
+    await ensureAppointmentStatusEnum();
+    console.log('✅ AppointmentStatus enum verified');
+  } catch (err) {
+    console.error('⚠️ AppointmentStatus enum sync failed:', err?.message ?? err);
+  }
+
+  server.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT} (HTTP + Socket.io chat)`);
+  });
+}
+
+start();
 
 export { io };
