@@ -8,15 +8,33 @@ export const getTherapistProfile = () =>
 export const updateTherapistProfile = (data) => 
   api.put('/users/profile', data).then(res => unwrap(res.data));
 
-export const getMyClients = () => 
-  api.get('/assignments/my-clients').then(res => {
-    const clients = unwrap(res.data) || [];
-    return { clients };
+const normalizeClientRow = (row) => {
+  const patient = row?.patient || {};
+  const user = patient.user || {};
+  return {
+    ...row,
+    assignedDate: row.assignedDate || row.assignedAt,
+    patient: {
+      ...patient,
+      name: patient.name || user.name || 'Client',
+      email: patient.email || user.email || '',
+      phone: patient.phone || user.phone || null,
+    },
+  };
+};
+
+export const getMyClients = () =>
+  api.get('/assignments/my-clients').then((res) => {
+    const raw = unwrap(res.data);
+    const list = Array.isArray(raw) ? raw : raw?.clients ?? [];
+    return { clients: list.map(normalizeClientRow) };
   });
 
 export const getClientDetails = async (clientId) => {
   const clientsRes = await getMyClients();
-  const match = (clientsRes.clients || []).find((c) => c.patient?.id === clientId);
+  const match = (clientsRes.clients || []).find(
+    (c) => c.patient?.id === clientId || c.patientId === clientId,
+  );
   return match?.patient || null;
 };
 

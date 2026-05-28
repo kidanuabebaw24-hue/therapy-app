@@ -50,10 +50,12 @@ const ClientManagement = () => {
   const filterClients = () => {
     let filtered = [...clients];
     if (searchTerm) {
-      filtered = filtered.filter(client => 
-        client.patient?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.patient?.email?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      filtered = filtered.filter((client) => {
+        const name = client.patient?.name?.toLowerCase() || '';
+        const email = client.patient?.email?.toLowerCase() || '';
+        const term = searchTerm.toLowerCase();
+        return name.includes(term) || email.includes(term);
+      });
     }
     setFilteredClients(filtered);
   };
@@ -207,6 +209,7 @@ const ClientManagement = () => {
           data={filteredClients}
           actions={actions}
           onAction={handleAction}
+          emptyMessage="No clients assigned yet. Clients appear here after admin assignment or when they book with you."
         />
       </div>
 

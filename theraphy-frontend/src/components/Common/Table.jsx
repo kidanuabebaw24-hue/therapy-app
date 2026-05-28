@@ -1,6 +1,6 @@
 import "./Table.css";
 
-const Table = ({ columns, data, onAction, actions }) => {
+const Table = ({ columns, data, onAction, actions, emptyMessage = 'No users found' }) => {
   return (
     <div className="table-container">
       <table className="table">
@@ -49,7 +49,7 @@ const Table = ({ columns, data, onAction, actions }) => {
                 colSpan={columns.length + (actions?.length ? 1 : 0)}
                 className="empty-state"
               >
-                No users found
+                {emptyMessage}
               </td>
             </tr>
           )}
