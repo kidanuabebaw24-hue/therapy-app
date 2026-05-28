@@ -780,7 +780,7 @@ export const bookAppointment = async (req, res) => {
         duration: Number(duration) || 50,
         notes,
         type: type || 'consultation',
-        status: 'pending_payment',
+        status: 'pending_admin_approval',
         paymentStatus: 'pending',
       },
       include: {
@@ -793,16 +793,16 @@ export const bookAppointment = async (req, res) => {
     if (admin) {
       await createNotification(
         admin.id,
-        'New Appointment Request',
-        `New appointment request from ${req.user.name}.`,
-        'booking_request'
+        'New Booking Approval Required',
+        'New appointment booking requires approval.',
+        'booking_request',
       );
     }
 
     return sendSuccess(res, {
       available: true,
       appointment,
-    }, 'Appointment created and pending payment', 201);
+    }, 'Appointment request submitted for admin approval', 201);
   } catch (error) {
     return sendError(res, error.message, 500, error);
   }

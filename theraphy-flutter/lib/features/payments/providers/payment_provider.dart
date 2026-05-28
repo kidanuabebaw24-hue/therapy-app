@@ -1,15 +1,19 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/booking_payment_model.dart';
 import '../services/mock_payment_service.dart';
 import '../../../../models/therapist_model.dart';
+import '../../../../models/session_model.dart';
 import '../../auth/presentation/providers/auth_provider.dart';
 import '../../../../core/network/network_providers.dart';
+import '../../../../core/network/api_constants.dart';
 import '../../../../core/utils/slot_time_utils.dart';
 
 class PaymentState {
   final BookingPaymentModel? currentBooking;
   final bool isProcessing;
+  final bool isSubmittingBooking;
   final bool isCheckingAvailability;
   final String? error;
   final String? lastTransactionId;
@@ -24,6 +28,7 @@ class PaymentState {
   const PaymentState({
     this.currentBooking,
     this.isProcessing = false,
+    this.isSubmittingBooking = false,
     this.isCheckingAvailability = false,
     this.error,
     this.lastTransactionId,
@@ -39,6 +44,7 @@ class PaymentState {
   PaymentState copyWith({
     BookingPaymentModel? currentBooking,
     bool? isProcessing,
+    bool? isSubmittingBooking,
     bool? isCheckingAvailability,
     String? error,
     String? lastTransactionId,
@@ -53,6 +59,7 @@ class PaymentState {
     return PaymentState(
       currentBooking: currentBooking ?? this.currentBooking,
       isProcessing: isProcessing ?? this.isProcessing,
+      isSubmittingBooking: isSubmittingBooking ?? this.isSubmittingBooking,
       isCheckingAvailability:
           isCheckingAvailability ?? this.isCheckingAvailability,
       error: error,
@@ -74,29 +81,107 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
 
   PaymentNotifier(this._ref) : super(const PaymentState());
 
-  void initiateBooking({
+  /// Submits booking to backend; stays pending until admin approves.
+  Future<bool> submitBookingRequest({
     required TherapistModel therapist,
     required DateTime date,
     required String timeSlot,
+    int duration = 50,
+  }) async {
+    state = state.copyWith(isSubmittingBooking: true, error: null);
+
+    try {
+      final apiClient = _ref.read(apiClientProvider);
+      final datePart = SlotTimeUtils.formatDatePart(date);
+      final timePart = SlotTimeUtils.toBackendTime(timeSlot);
+      final dayName = SlotTimeUtils.weekdayName(date.weekday);
+      final timezoneOffsetMinutes = DateTime(
+        date.year,
+        date.month,
+        date.day,
+      ).timeZoneOffset.inMinutes;
+
+      final response = await apiClient.post(
+        ApiConstants.bookAppointment,
+        data: {
+          'therapistId': therapist.id,
+          'appointmentDate': datePart,
+          'appointmentTime': timePart,
+          'appointmentDay': dayName,
+          'timezoneOffsetMinutes': timezoneOffsetMinutes,
+          'duration': duration,
+          'notes': 'Booked via mobile app',
+          'type': 'consultation',
+        },
+      );
+
+      final payload = response.data['data'] ?? response.data;
+      final appointment = payload['appointment'] ?? payload;
+      final appointmentId = appointment['id']?.toString();
+
+      final authState = _ref.read(authProvider);
+      final patientName = authState.user?.name ?? 'Valued Client';
+
+      final booking = BookingPaymentModel(
+        appointmentId: appointmentId,
+        therapistId: therapist.id,
+        therapistName: therapist.name,
+        therapistImageUrl: therapist.imageUrl,
+        therapistSpecialization: therapist.specialization,
+        patientName: patientName,
+        appointmentDate: date,
+        appointmentTime: timeSlot,
+        paymentMethod: '',
+        paymentStatus: 'pending',
+        transactionId: appointmentId ?? '',
+        amount: therapist.hourlyRate,
+        bookingStatus: 'pending_admin_approval',
+      );
+
+      state = state.copyWith(
+        isSubmittingBooking: false,
+        currentBooking: booking,
+      );
+      return true;
+    } catch (e) {
+      state = state.copyWith(
+        isSubmittingBooking: false,
+        error: e.toString().replaceAll('Exception:', '').trim(),
+      );
+      return false;
+    }
+  }
+
+  /// Loads an admin-approved appointment for payment (from sessions list).
+  void loadBookingForPayment({
+    required SessionModel session,
+    String therapistImageUrl = '',
+    double hourlyRate = 50.0,
+    String therapistSpecialization = 'Consultation',
   }) {
     final authState = _ref.read(authProvider);
     final patientName = authState.user?.name ?? 'Valued Client';
-
-    final amount = therapist.hourlyRate;
+    final localDate = DateTime(
+      session.date.year,
+      session.date.month,
+      session.date.day,
+    );
+    final timeLabel = DateFormat('h:mm a').format(session.date);
 
     final booking = BookingPaymentModel(
-      therapistId: therapist.id,
-      therapistName: therapist.name,
-      therapistImageUrl: therapist.imageUrl,
-      therapistSpecialization: therapist.specialization,
+      appointmentId: session.id,
+      therapistId: session.therapistId,
+      therapistName: session.therapistName ?? 'Therapist',
+      therapistImageUrl: therapistImageUrl,
+      therapistSpecialization: therapistSpecialization,
       patientName: patientName,
-      appointmentDate: date,
-      appointmentTime: timeSlot,
+      appointmentDate: localDate,
+      appointmentTime: timeLabel,
       paymentMethod: '',
-      paymentStatus: 'pending',
-      transactionId: '',
-      amount: amount,
-      bookingStatus: 'pending_payment',
+      paymentStatus: session.paymentStatus,
+      transactionId: session.id,
+      amount: hourlyRate,
+      bookingStatus: 'approved',
     );
 
     state = PaymentState(currentBooking: booking);
@@ -228,7 +313,7 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
         lastTransactionId: result.transactionId,
         currentBooking: state.currentBooking!.copyWith(
           paymentStatus: 'paid',
-          bookingStatus: 'pending_admin_approval',
+          bookingStatus: 'scheduled',
           transactionId: result.transactionId,
         ),
       );
@@ -259,7 +344,7 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
         lastTransactionId: transactionId,
         currentBooking: state.currentBooking!.copyWith(
           paymentStatus: 'paid',
-          bookingStatus: 'pending_admin_approval',
+          bookingStatus: 'scheduled',
           paymentMethod: method,
           transactionId: transactionId,
         ),
@@ -276,14 +361,20 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
         state.currentBooking!.appointmentTime,
       );
 
-      final response =
-          await apiClient.post('/payments/chapa/initialize', data: {
-        'therapistId': state.currentBooking!.therapistId,
+      final booking = state.currentBooking!;
+      final initPayload = <String, dynamic>{
+        'therapistId': booking.therapistId,
         'date': bookingDate.toIso8601String(),
         'duration': 50,
         'notes': 'Booked via Chapa Payment Gateway integration',
         'type': 'consultation',
-      });
+      };
+      if (booking.appointmentId != null && booking.appointmentId!.isNotEmpty) {
+        initPayload['appointmentId'] = booking.appointmentId;
+      }
+
+      final response =
+          await apiClient.post('/payments/chapa/initialize', data: initPayload);
 
       final resData = response.data['data'];
       final checkoutUrl = resData['checkout_url'] as String;
@@ -344,7 +435,7 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
         lastTransactionId: transactionId,
         currentBooking: state.currentBooking!.copyWith(
           paymentStatus: 'paid',
-          bookingStatus: 'pending_admin_approval',
+          bookingStatus: 'scheduled',
           transactionId: transactionId,
         ),
       );

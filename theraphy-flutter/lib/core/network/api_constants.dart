@@ -28,6 +28,7 @@ class ApiConstants {
       '/appointments/available-slots';
   static const String bookAppointment = '/appointments/book';
   static const String appointments = '/appointments';
+  static const String myAppointments = '/appointments/me';
 
   // Mood & Progress
   static const String moods = '/moods';

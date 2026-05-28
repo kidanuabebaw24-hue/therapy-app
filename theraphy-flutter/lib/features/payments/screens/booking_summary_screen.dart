@@ -27,6 +27,10 @@ class BookingSummaryScreen extends ConsumerWidget {
     final formattedDate = DateFormat('EEEE, MMMM d, yyyy').format(booking.appointmentDate);
     const serviceFee = 5.00;
     final totalAmount = booking.amount + serviceFee;
+    final isPendingApproval =
+        booking.bookingStatus == 'pending_admin_approval';
+    final canProceedToPayment =
+        booking.bookingStatus == 'approved' && booking.paymentStatus != 'paid';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -45,6 +49,27 @@ class BookingSummaryScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (isPendingApproval) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.warning.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: AppColors.warning.withValues(alpha: 0.35),
+                          ),
+                        ),
+                        child: Text(
+                          'Your booking is pending admin approval. You can pay once it is approved.',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.warning,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
                     // Therapist Quick Card
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -191,12 +216,21 @@ class BookingSummaryScreen extends ConsumerWidget {
                   ),
                 ],
               ),
-              child: AppButton(
-                label: 'Proceed to Payment',
-                onPressed: () {
-                  context.push('/booking/payment-method');
-                },
-              ),
+              child: canProceedToPayment
+                  ? AppButton(
+                      label: 'Proceed to Payment',
+                      onPressed: () {
+                        context.push('/booking/payment-method');
+                      },
+                    )
+                  : AppButton(
+                      label: isPendingApproval
+                          ? 'Awaiting Admin Approval'
+                          : 'Back to Dashboard',
+                      onPressed: isPendingApproval
+                          ? null
+                          : () => context.go('/dashboard'),
+                    ),
             ),
           ],
         ),

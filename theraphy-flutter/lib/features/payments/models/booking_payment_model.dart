@@ -1,4 +1,5 @@
 class BookingPaymentModel {
+  final String? appointmentId;
   final String therapistId;
   final String therapistName;
   final String therapistImageUrl;
@@ -14,6 +15,7 @@ class BookingPaymentModel {
       bookingStatus; // pending_payment | pending_admin_approval | approved | rejected | cancelled
 
   const BookingPaymentModel({
+    this.appointmentId,
     required this.therapistId,
     required this.therapistName,
     required this.therapistImageUrl,
@@ -35,6 +37,7 @@ class BookingPaymentModel {
     String? bookingStatus,
   }) {
     return BookingPaymentModel(
+      appointmentId: appointmentId,
       therapistId: therapistId,
       therapistName: therapistName,
       therapistImageUrl: therapistImageUrl,

@@ -288,10 +288,12 @@ class _TherapistProfileScreenState
                   const SizedBox(height: 40),
                   AppButton(
                     label: 'Book Appointment',
-                    isLoading: paymentState.isCheckingAvailability,
+                    isLoading: paymentState.isCheckingAvailability ||
+                        paymentState.isSubmittingBooking,
                     onPressed: (_selectedDay != null &&
                             _selectedSlot != null &&
                             !paymentState.isCheckingAvailability &&
+                            !paymentState.isSubmittingBooking &&
                             !_loadingSlots)
                         ? () async {
                             final isAvailable = await ref
@@ -305,12 +307,26 @@ class _TherapistProfileScreenState
                             if (!context.mounted) return;
                             if (!isAvailable) return;
 
-                            ref.read(paymentProvider.notifier).initiateBooking(
+                            final submitted = await ref
+                                .read(paymentProvider.notifier)
+                                .submitBookingRequest(
                                   therapist: widget.therapist,
                                   date: selectedDay,
                                   timeSlot: _selectedSlot!,
                                 );
-                            context.push('/booking/summary');
+
+                            if (!context.mounted) return;
+                            if (!submitted) {
+                              final err = ref.read(paymentProvider).error;
+                              if (err != null && err.isNotEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(err)),
+                                );
+                              }
+                              return;
+                            }
+
+                            context.push('/booking/confirmation');
                           }
                         : null,
                   ),

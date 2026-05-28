@@ -18,6 +18,14 @@ export const createPayment = async (req, res) => {
 
     if (!appointment) return sendError(res, 'Appointment not found', 404);
 
+    if (appointment.status !== 'approved') {
+      return sendError(res, 'Appointment must be approved before payment', 400);
+    }
+
+    if (appointment.paymentStatus === 'paid') {
+      return sendError(res, 'Appointment is already paid', 400);
+    }
+
     const payment = await prisma.payment.create({
       data: {
         patientId: patientProfile.id,
@@ -33,19 +41,9 @@ export const createPayment = async (req, res) => {
       where: { id: appointmentId },
       data: {
         paymentStatus: 'paid',
-        status: 'pending_admin_approval',
+        status: 'scheduled',
       },
     });
-
-    const admin = await prisma.user.findFirst({ where: { role: 'admin' } });
-    if (admin) {
-      await createNotification(
-        admin.id,
-        'New Booking Approval Required',
-        'New appointment booking requires approval.',
-        'booking_request',
-      );
-    }
 
     return sendSuccess(res, payment, 'Payment processed', 201);
   } catch (error) {
@@ -79,10 +77,99 @@ export const getMyPayments = async (req, res) => {
  */
 export const initializeChapaPayment = async (req, res) => {
   try {
-    const { therapistId, date, duration, notes, type } = req.body;
+    const { appointmentId, therapistId, date, duration, notes, type } = req.body;
     const patientProfile = req.user.patientProfile;
 
     if (!patientProfile) return sendError(res, 'Patient profile not found. You must be signed in as a patient to book.', 404);
+
+    // Pay for an existing admin-approved appointment (no duplicate booking).
+    if (appointmentId) {
+      const existingAppointment = await prisma.appointment.findFirst({
+        where: { id: appointmentId, patientId: patientProfile.id },
+        include: { therapist: { include: { user: true } } },
+      });
+
+      if (!existingAppointment) return sendError(res, 'Appointment not found', 404);
+
+      if (existingAppointment.status !== 'approved') {
+        return sendError(res, 'This appointment must be approved by admin before payment.', 400);
+      }
+
+      if (existingAppointment.paymentStatus === 'paid') {
+        return sendError(res, 'This appointment is already paid.', 400);
+      }
+
+      const therapist = existingAppointment.therapist;
+      if (!therapist) return sendError(res, 'Therapist not found for this appointment', 404);
+
+      const rateUsd = therapist.hourlyRate || 50.0;
+      const rateEtb = Math.round(rateUsd * 120);
+      const txRef = `tx-${existingAppointment.id.substring(0, 8)}-${Date.now().toString().slice(-6)}`;
+
+      const protocol = req.secure || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+      const host = req.get('host') || 'localhost:5000';
+      const backendUrl = `${protocol}://${host}`;
+      const returnUrl = `${backendUrl}/api/payments/chapa/success?tx_ref=${txRef}`;
+
+      const chapaSecretKey = process.env.CHAPA_SECRET_KEY || 'CHASECK_TEST-DEQ1BOjsE3FM4fNfG5qalijqTxfl2hmm';
+
+      const chapaResponse = await fetch('https://api.chapa.co/v1/transaction/initialize', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${chapaSecretKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: rateEtb.toString(),
+          currency: 'ETB',
+          email: req.user.email,
+          first_name: req.user.name.split(' ')[0] || 'Patient',
+          last_name: req.user.name.split(' ')[1] || 'User',
+          phone_number: req.user.phone || '0912345678',
+          tx_ref: txRef,
+          callback_url: returnUrl,
+          return_url: returnUrl,
+          customization: {
+            title: 'Theraphy Session',
+            description: `Booking with therapist ${therapist.user.name}`,
+          },
+        }),
+      });
+
+      const chapaData = await chapaResponse.json();
+
+      if (!chapaResponse.ok || chapaData.status !== 'success') {
+        let errorMsg = 'Failed to initialize payment with Chapa.';
+        if (chapaData.message) {
+          if (typeof chapaData.message === 'string') {
+            errorMsg = chapaData.message;
+          } else if (typeof chapaData.message === 'object') {
+            errorMsg = Object.entries(chapaData.message)
+              .map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(', ') : val}`)
+              .join('; ');
+          }
+        }
+        return sendError(res, errorMsg, 400);
+      }
+
+      const payment = await prisma.payment.create({
+        data: {
+          patientId: patientProfile.id,
+          appointmentId: existingAppointment.id,
+          amount: rateUsd,
+          status: 'pending',
+          reference: txRef,
+          paymentMethod: 'chapa',
+        },
+      });
+
+      return sendSuccess(res, {
+        checkout_url: chapaData.data.checkout_url,
+        tx_ref: txRef,
+        appointment: existingAppointment,
+        payment,
+      }, 'Chapa payment initialized successfully', 201);
+    }
 
     let targetTherapistId = therapistId;
     let therapist = null;
@@ -337,25 +424,10 @@ export const verifyChapaPayment = async (req, res) => {
         where: { id: payment.appointmentId },
         data: {
           paymentStatus: 'paid',
-          status: 'pending_admin_approval',
+          status: 'scheduled',
         },
       }),
     ]);
-
-    // Notify admin for approval workflow
-    try {
-      const admin = await prisma.user.findFirst({ where: { role: 'admin' } });
-      if (admin) {
-        await createNotification(
-          admin.id,
-          'New Booking Approval Required',
-          'New appointment booking requires approval.',
-          'booking_request',
-        );
-      }
-    } catch (notifErr) {
-      console.warn('⚠️ Notification create skipped:', notifErr.message);
-    }
 
     return sendSuccess(res, updatedPayment, 'Payment successfully processed and verified.');
 
@@ -407,20 +479,11 @@ export const chapaSuccessPage = async (req, res) => {
                 where: { id: payment.appointmentId },
                 data: {
                   paymentStatus: 'paid',
-                  status: 'pending_admin_approval',
+                  status: 'scheduled',
                 },
               }),
             ]);
 
-            const admin = await prisma.user.findFirst({ where: { role: 'admin' } });
-            if (admin) {
-              await createNotification(
-                admin.id,
-                'New Booking Approval Required',
-                'New appointment booking requires approval.',
-                'booking_request',
-              );
-            }
             console.log(`✅ Success landing automatically verified & captured payment for ref: ${tx_ref}`);
           }
         }

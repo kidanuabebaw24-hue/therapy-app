@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:theraphy_flutter/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../features/payments/providers/payment_provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../models/session_model.dart';
@@ -113,17 +115,17 @@ class _SessionList extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       itemCount: sessions.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (_, i) => _SessionTile(session: sessions[i]),
+      itemBuilder: (_, i) => _SessionTile(session: sessions[i], key: ValueKey(sessions[i].id)),
     );
   }
 }
 
-class _SessionTile extends StatelessWidget {
+class _SessionTile extends ConsumerWidget {
   final SessionModel session;
-  const _SessionTile({required this.session});
+  const _SessionTile({super.key, required this.session});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final statusColor = session.isCompleted
         ? AppColors.success
         : session.isCancelled || session.isRejected
@@ -190,6 +192,18 @@ class _SessionTile extends StatelessWidget {
               ),
             ],
           ),
+          if (session.isApproved && !session.isPaid) ...[
+            const SizedBox(height: 16),
+            AppButton(
+              label: 'Proceed to Payment',
+              onPressed: () {
+                ref.read(paymentProvider.notifier).loadBookingForPayment(
+                      session: session,
+                    );
+                context.push('/booking/summary');
+              },
+            ),
+          ],
         ],
       ),
     );

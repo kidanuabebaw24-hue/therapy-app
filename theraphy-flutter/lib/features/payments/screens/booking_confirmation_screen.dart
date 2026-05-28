@@ -30,14 +30,22 @@ class BookingConfirmationScreen extends ConsumerWidget {
         : 'REF-BOOKING-001';
     final isPendingAdminApproval =
         booking.bookingStatus == 'pending_admin_approval';
-    final statusLabel =
-        isPendingAdminApproval ? 'PENDING ADMIN APPROVAL' : 'CONFIRMED';
+    final isScheduled = booking.bookingStatus == 'scheduled';
+    final statusLabel = isPendingAdminApproval
+        ? 'PENDING ADMIN APPROVAL'
+        : isScheduled
+            ? 'SCHEDULED'
+            : 'CONFIRMED';
     final titleLabel = isPendingAdminApproval
         ? 'Appointment Request Submitted'
-        : 'Appointment Confirmed';
+        : isScheduled
+            ? 'Payment Successful'
+            : 'Appointment Confirmed';
     final subtitleLabel = isPendingAdminApproval
-        ? 'Your booking request has been sent for admin approval. You will be notified once it is approved or rejected.'
-        : 'Your therapy session has been successfully booked. Let\'s make this a positive step forward.';
+        ? 'Your booking request has been sent for admin approval. You will be notified once it is approved — then you can proceed to payment.'
+        : isScheduled
+            ? 'Your session is scheduled. We look forward to seeing you.'
+            : 'Your therapy session has been successfully booked. Let\'s make this a positive step forward.';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -154,10 +162,14 @@ class BookingConfirmationScreen extends ConsumerWidget {
                       child: Divider(height: 1),
                     ),
 
-                    // Payment Receipt details
-                    _buildReceiptRow(Icons.account_balance_wallet_rounded,
-                        'Payment Method', booking.paymentMethod.toUpperCase()),
-                    const SizedBox(height: 14),
+                    if (!isPendingAdminApproval) ...[
+                      _buildReceiptRow(Icons.account_balance_wallet_rounded,
+                          'Payment Method',
+                          booking.paymentMethod.isNotEmpty
+                              ? booking.paymentMethod.toUpperCase()
+                              : 'N/A'),
+                      const SizedBox(height: 14),
+                    ],
                     _buildReceiptRow(
                         Icons.payments_rounded, 'Status', statusLabel),
                     const SizedBox(height: 14),

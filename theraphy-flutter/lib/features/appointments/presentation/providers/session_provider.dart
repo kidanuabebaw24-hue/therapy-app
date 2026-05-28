@@ -57,7 +57,7 @@ class SessionNotifier extends StateNotifier<SessionState> {
   Future<void> fetchSessions() async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final response = await _apiClient.get(ApiConstants.appointments);
+      final response = await _apiClient.get(ApiConstants.myAppointments);
       final data = response.data['data'];
       if (data == null) {
         state = state.copyWith(sessions: [], isLoading: false);
