@@ -21,8 +21,11 @@ const TherapistPrivateRoute = ({ children }) => {
     return <Navigate to="/register" />;
   }
 
-  // Check if therapist is verified
-  if (!user?.isVerified) {
+  const isVerified =
+    user?.isVerified === true || user?.therapistProfile?.isVerified === true;
+
+  // Check if therapist is verified by admin
+  if (!isVerified) {
     return (
       <div className="unverified-container">
         <div className="unverified-card">

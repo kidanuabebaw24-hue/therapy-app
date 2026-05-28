@@ -1,4 +1,6 @@
 import { AuthService } from '../services/authService.js';
+
+const formatUser = (user) => AuthService.formatUserForClient(user);
 import { sendSuccess, sendError } from '../utils/responseHelper.js';
 
 export const register = async (req, res) => {
@@ -22,7 +24,7 @@ export const login = async (req, res) => {
 
 export const getMe = async (req, res) => {
   try {
-    return sendSuccess(res, { user: req.user }, 'User profile retrieved');
+    return sendSuccess(res, { user: formatUser(req.user) }, 'User profile retrieved');
   } catch (error) {
     return sendError(res, error.message, 500, error);
   }

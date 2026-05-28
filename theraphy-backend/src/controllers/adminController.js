@@ -55,17 +55,25 @@ export const getAllUsers = async (req, res) => {
 
     const users = await prisma.user.findMany({
       where,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        createdAt: true,
-      },
+      include: { therapistProfile: true },
       orderBy: { createdAt: 'desc' },
     });
 
-    return sendSuccess(res, users, 'Users retrieved');
+    const formatted = users.map((u) => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      createdAt: u.createdAt,
+      phone: u.phone ?? null,
+      isVerified: u.role === 'therapist' ? Boolean(u.therapistProfile?.isVerified) : true,
+      therapistId: u.therapistProfile?.id ?? null,
+      specialization: u.therapistProfile?.specialization ?? null,
+      yearsOfExperience: u.therapistProfile?.yearsOfExperience ?? null,
+      hourlyRate: u.therapistProfile?.hourlyRate ?? null,
+    }));
+
+    return sendSuccess(res, { users: formatted }, 'Users retrieved');
   } catch (error) {
     return sendError(res, error.message, 500, error);
   }
@@ -74,11 +82,39 @@ export const getAllUsers = async (req, res) => {
 export const verifyTherapist = async (req, res) => {
   try {
     const { id } = req.params;
-    const therapist = await prisma.therapist.update({
-      where: { id },
+
+    const therapist = await prisma.therapist.findFirst({
+      where: { OR: [{ id }, { userId: id }] },
+      include: { user: { select: { id: true, name: true } } },
+    });
+
+    if (!therapist) {
+      return sendError(
+        res,
+        'Therapist profile not found for this user. Re-register as therapist or contact support.',
+        404,
+      );
+    }
+
+    if (therapist.isVerified) {
+      return sendSuccess(res, therapist, 'Therapist is already verified');
+    }
+
+    const updated = await prisma.therapist.update({
+      where: { id: therapist.id },
       data: { isVerified: true },
     });
-    return sendSuccess(res, therapist, 'Therapist verified');
+
+    if (therapist.user?.id) {
+      await createNotification(
+        therapist.user.id,
+        'Account Verified',
+        'Your therapist account has been approved. You can now access the therapist dashboard.',
+        'booking_approved',
+      );
+    }
+
+    return sendSuccess(res, updated, 'Therapist verified');
   } catch (error) {
     return sendError(res, error.message, 500, error);
   }

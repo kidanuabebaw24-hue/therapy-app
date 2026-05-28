@@ -4,6 +4,20 @@ import { UserRepository } from '../repositories/userRepository.js';
 import { CBTRepository } from '../repositories/cbtRepository.js';
 
 export class AuthService {
+  /** Expose therapist verification on user for web/mobile clients. */
+  static formatUserForClient(user) {
+    if (!user) return null;
+    const { password, ...safe } = user;
+
+    if (safe.role === 'therapist' && safe.therapistProfile) {
+      safe.isVerified = Boolean(safe.therapistProfile.isVerified);
+      safe.therapistId = safe.therapistProfile.id;
+      safe.specialization = safe.therapistProfile.specialization ?? null;
+    }
+
+    return safe;
+  }
+
   static async register(userData) {
     const { email, password } = userData;
 
@@ -28,7 +42,7 @@ export class AuthService {
 
     const token = this.generateToken(user.id);
 
-    return { user, token };
+    return { user: this.formatUserForClient(user), token };
   }
 
   static async login(email, password) {
@@ -44,7 +58,7 @@ export class AuthService {
 
     const token = this.generateToken(user.id);
 
-    return { user, token };
+    return { user: this.formatUserForClient(user), token };
   }
 
   static generateToken(id) {

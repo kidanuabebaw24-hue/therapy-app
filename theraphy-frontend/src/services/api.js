@@ -35,12 +35,28 @@ api.interceptors.response.use(
 );
 
 // ── Admin ──────────────────────────────────────────────────────────────────────
+/** Unwrap { success, data } — supports data as array or data[key] as array. */
+const unwrapList = (body, key = "users") => {
+  const payload = body?.data ?? body;
+  if (Array.isArray(payload)) return payload;
+  if (payload && Array.isArray(payload[key])) return payload[key];
+  if (Array.isArray(body?.[key])) return body[key];
+  return [];
+};
+
 export const getSystemStats = () =>
   api.get("/admin/stats").then((res) => res.data);
 export const getAllUsers = (params) =>
-  api.get("/admin/users", { params }).then((res) => res.data);
-export const verifyTherapist = (therapistId) =>
-  api.patch(`/admin/verify-therapist/${therapistId}`).then((res) => res.data);
+  api
+    .get("/admin/users", { params })
+    .then((res) => unwrapList(res.data, "users"));
+export const verifyTherapist = ({ therapistId, userId }) => {
+  const id = therapistId || userId;
+  if (!id) return Promise.reject(new Error("Missing therapist or user id"));
+  return api
+    .patch(`/admin/verify-therapist/${id}`)
+    .then((res) => res.data?.data ?? res.data);
+};
 export const getSystemAnalytics = () =>
   api.get("/admin/analytics").then((res) => res.data);
 

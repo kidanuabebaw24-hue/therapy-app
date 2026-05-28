@@ -7,6 +7,10 @@ const router = express.Router();
 router.get('/stats', protect, authorize('admin'), getSystemStats);
 router.get('/users', protect, authorize('admin'), getAllUsers);
 router.patch('/verify-therapist/:id', protect, authorize('admin'), verifyTherapist);
+router.patch('/users/:userId/verify-therapist', protect, authorize('admin'), (req, res, next) => {
+  req.params.id = req.params.userId;
+  return verifyTherapist(req, res, next);
+});
 
 // Booking approval flows
 router.get('/bookings', protect, authorize('admin'), getAllBookings);

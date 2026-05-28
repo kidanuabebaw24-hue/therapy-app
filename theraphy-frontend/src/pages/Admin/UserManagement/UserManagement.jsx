@@ -28,8 +28,8 @@ const UserManagement = () => {
   const fetchAllUsers = async () => {
     setLoading(true);
     try {
-      const data = await getAllUsers({ all: 'true' });
-      setAllUsers(data.users || []);
+      const users = await getAllUsers({ all: 'true' });
+      setAllUsers(Array.isArray(users) ? users : []);
       setError(null);
     } catch (error) {
       console.error('Fetch error:', error);
@@ -72,12 +72,19 @@ const UserManagement = () => {
 
   const handleVerify = async (user) => {
     try {
-      await verifyTherapist(user.id);
+      await verifyTherapist({
+        therapistId: user.therapistId,
+        userId: user.id,
+      });
       toast.success(`${user.name} verified successfully`);
       fetchAllUsers();
     } catch (error) {
-      console.log(error);
-      toast.error('Failed to verify therapist');
+      console.error('Verify therapist error:', error);
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        'Failed to verify therapist';
+      toast.error(message);
     }
   };
 
