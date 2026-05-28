@@ -79,10 +79,9 @@ class TherapistChatNotifier extends StateNotifier<TherapistChatState> {
       final assignmentRes =
           await api.get(ApiConstants.myTherapistAssignment);
       final assignment = assignmentRes.data['data'] ?? assignmentRes.data;
-      final therapistProfile = assignment['therapist'];
-      final therapistUser = therapistProfile?['user'];
+      final therapistProfile = assignment['therapist'] as Map<String, dynamic>?;
 
-      if (therapistProfile == null || therapistUser == null) {
+      if (therapistProfile == null) {
         state = state.copyWith(
           isLoading: false,
           error: 'No therapist assigned yet. Book a session or ask admin to assign one.',
@@ -90,14 +89,28 @@ class TherapistChatNotifier extends StateNotifier<TherapistChatState> {
         return;
       }
 
-      final therapistUserId = therapistUser['id'] as String;
+      final therapistUser = therapistProfile['user'] as Map<String, dynamic>?;
+      final therapistUserId = _asString(
+        therapistProfile['userId'] ?? therapistUser?['id'],
+      );
+
+      if (therapistUserId.isEmpty) {
+        state = state.copyWith(
+          isLoading: false,
+          error: 'Therapist profile is missing user id. Ask admin to re-assign your therapist.',
+        );
+        return;
+      }
+
       final conversationId = '${authUser.id}_$therapistUserId';
 
       final therapist = AssignedTherapistChat(
         userId: therapistUserId,
-        name: therapistUser['name'] as String? ?? 'Therapist',
-        specialization:
-            therapistProfile['specialization'] as String? ?? 'Therapist',
+        name: _asString(therapistUser?['name'] ?? therapistProfile['name'], fallback: 'Therapist'),
+        specialization: _asString(
+          therapistProfile['specialization'],
+          fallback: 'Therapist',
+        ),
         conversationId: conversationId,
       );
 
@@ -229,6 +242,11 @@ class TherapistChatNotifier extends StateNotifier<TherapistChatState> {
     final therapist = state.therapist;
     if (therapist == null) return;
     _socketService?.sendTyping(therapist.conversationId, typing);
+  }
+
+  static String _asString(dynamic value, {String fallback = ''}) {
+    if (value == null) return fallback;
+    return value.toString();
   }
 
   @override

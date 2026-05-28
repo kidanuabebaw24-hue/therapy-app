@@ -39,12 +39,25 @@ export const getMyTherapist = async (req, res) => {
 
     const assignment = await prisma.therapistAssignment.findFirst({
       where: { patientId: patientProfile.id, status: 'active' },
-      include: { therapist: { include: { user: { select: { name: true, email: true } } } } },
+      include: {
+        therapist: {
+          include: {
+            user: { select: { id: true, name: true, email: true, phone: true } },
+          },
+        },
+      },
     });
 
     if (!assignment) return sendError(res, 'No therapist assigned', 404);
 
-    return sendSuccess(res, assignment, 'Therapist retrieved');
+    return sendSuccess(
+      res,
+      {
+        ...assignment,
+        therapist: formatTherapistForAdmin(assignment.therapist),
+      },
+      'Therapist retrieved',
+    );
   } catch (error) {
     return sendError(res, error.message, 500, error);
   }

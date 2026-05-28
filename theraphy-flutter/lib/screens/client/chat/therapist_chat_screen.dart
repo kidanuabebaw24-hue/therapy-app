@@ -205,7 +205,7 @@ class _TherapistChatScreenState extends ConsumerState<TherapistChatScreen> {
             ),
             const SizedBox(width: 8),
             IconButton.filled(
-              onPressed: state.isSending || !state.socketReady ? null : _send,
+              onPressed: state.isSending ? null : _send,
               icon: const Icon(Icons.send_rounded),
               style: IconButton.styleFrom(
                 backgroundColor: AppColors.primary,
