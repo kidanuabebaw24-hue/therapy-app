@@ -9,6 +9,7 @@ import '../../auth/presentation/providers/auth_provider.dart';
 import '../../../../core/network/network_providers.dart';
 import '../../../../core/network/api_constants.dart';
 import '../../../../core/utils/slot_time_utils.dart';
+import '../../appointments/presentation/providers/session_provider.dart';
 
 class PaymentState {
   final BookingPaymentModel? currentBooking;
@@ -180,11 +181,48 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
       paymentMethod: '',
       paymentStatus: session.paymentStatus,
       transactionId: session.id,
-      amount: hourlyRate,
+      amount: hourlyRate > 0 ? hourlyRate : 50.0,
       bookingStatus: 'approved',
     );
 
     state = PaymentState(currentBooking: booking);
+  }
+
+  /// Refresh booking from server after admin approval (e.g. from confirmation screen).
+  Future<bool> syncApprovedBookingFromServer() async {
+    final current = state.currentBooking;
+    if (current?.appointmentId == null || current!.appointmentId!.isEmpty) {
+      return false;
+    }
+
+    try {
+      final apiClient = _ref.read(apiClientProvider);
+      final response = await apiClient.get(ApiConstants.myAppointments);
+      final body = response.data;
+      final data = body is Map ? body['data'] : body;
+      final List<dynamic> raw =
+          data is List ? data : (data is Map ? (data['appointments'] as List? ?? []) : []);
+
+      final match = raw.cast<Map>().firstWhere(
+            (e) => e['id']?.toString() == current.appointmentId,
+            orElse: () => <String, dynamic>{},
+          );
+
+      if (match.isEmpty) return false;
+
+      final session = SessionModel.fromJson(Map<String, dynamic>.from(match));
+      if (!session.isApproved || session.isPaid) return false;
+
+      loadBookingForPayment(
+        session: session,
+        hourlyRate: session.therapistHourlyRate ?? current.amount,
+        therapistSpecialization:
+            session.therapistSpecialization ?? current.therapistSpecialization,
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<bool> checkTherapistAvailability({
@@ -300,34 +338,79 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
 
     state = state.copyWith(isProcessing: true, error: null);
 
+    final booking = state.currentBooking!;
+    final appointmentId = booking.appointmentId;
+
+    // Pay for admin-approved appointment via backend (not mock-only).
+    if (appointmentId != null &&
+        appointmentId.isNotEmpty &&
+        booking.bookingStatus == 'approved') {
+      try {
+        final apiClient = _ref.read(apiClientProvider);
+        final response = await apiClient.post(
+          '/payments',
+          data: {
+            'appointmentId': appointmentId,
+            'amount': booking.amount,
+            'paymentMethod': 'card',
+            'transactionId': 'card-${DateTime.now().millisecondsSinceEpoch}',
+          },
+        );
+        final payload = response.data['data'] ?? response.data;
+        final txId = payload['transactionId']?.toString() ??
+            payload['id']?.toString() ??
+            'card-paid';
+
+        state = state.copyWith(
+          isProcessing: false,
+          lastTransactionId: txId,
+          currentBooking: booking.copyWith(
+            paymentStatus: 'paid',
+            bookingStatus: 'scheduled',
+            transactionId: txId,
+            paymentMethod: 'card',
+          ),
+        );
+        try {
+          await _ref.read(sessionProvider.notifier).fetchSessions();
+        } catch (_) {}
+        return true;
+      } catch (e) {
+        state = state.copyWith(
+          isProcessing: false,
+          error: e.toString().replaceAll('Exception:', '').trim(),
+          currentBooking: booking.copyWith(paymentStatus: 'failed'),
+        );
+        return false;
+      }
+    }
+
     final result = await _paymentService.processPayment(
       cardHolder: cardHolder,
       cardNumber: cardNumber,
-      paymentMethod: state.currentBooking!.paymentMethod,
-      amount: state.currentBooking!.amount,
+      paymentMethod: booking.paymentMethod,
+      amount: booking.amount,
     );
 
     if (result.success) {
       state = state.copyWith(
         isProcessing: false,
         lastTransactionId: result.transactionId,
-        currentBooking: state.currentBooking!.copyWith(
+        currentBooking: booking.copyWith(
           paymentStatus: 'paid',
           bookingStatus: 'scheduled',
           transactionId: result.transactionId,
         ),
       );
       return true;
-    } else {
-      state = state.copyWith(
-        isProcessing: false,
-        error: result.errorMessage,
-        currentBooking: state.currentBooking!.copyWith(
-          paymentStatus: 'failed',
-        ),
-      );
-      return false;
     }
+
+    state = state.copyWith(
+      isProcessing: false,
+      error: result.errorMessage,
+      currentBooking: booking.copyWith(paymentStatus: 'failed'),
+    );
+    return false;
   }
 
   Future<bool> executeInstantPayment(String method) async {
@@ -439,6 +522,9 @@ class PaymentNotifier extends StateNotifier<PaymentState> {
           transactionId: transactionId,
         ),
       );
+      try {
+        await _ref.read(sessionProvider.notifier).fetchSessions();
+      } catch (_) {}
       return true;
     } catch (e) {
       state = state.copyWith(

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:theraphy_flutter/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../features/payments/providers/payment_provider.dart';
+import '../../../features/payments/utils/payment_flow.dart';
+import '../../../features/payments/widgets/payment_due_banner.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../models/session_model.dart';
@@ -67,11 +68,32 @@ class _SessionsScreenState extends ConsumerState<SessionsScreen>
       ),
       body: state.isLoading
           ? const Center(child: CircularProgressIndicator())
-          : TabBarView(
-              controller: _tabCtrl,
+          : Column(
               children: [
-                _SessionList(sessions: state.upcoming, emptyMessage: l10n.noUpcomingSessions),
-                _SessionList(sessions: state.past, emptyMessage: l10n.noPastSessions),
+                if (state.needsPayment.isNotEmpty)
+                  PaymentDueBanner(
+                    session: state.needsPayment.first,
+                    onPay: () => openPaymentForSession(
+                      context,
+                      ref,
+                      state.needsPayment.first,
+                    ),
+                  ),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabCtrl,
+                    children: [
+                      _SessionList(
+                        sessions: state.upcoming,
+                        emptyMessage: l10n.noUpcomingSessions,
+                      ),
+                      _SessionList(
+                        sessions: state.past,
+                        emptyMessage: l10n.noPastSessions,
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
     );
@@ -192,16 +214,11 @@ class _SessionTile extends ConsumerWidget {
               ),
             ],
           ),
-          if (session.isApproved && !session.isPaid) ...[
+          if (session.needsPayment) ...[
             const SizedBox(height: 16),
             AppButton(
               label: 'Proceed to Payment',
-              onPressed: () {
-                ref.read(paymentProvider.notifier).loadBookingForPayment(
-                      session: session,
-                    );
-                context.push('/booking/summary');
-              },
+              onPressed: () => openPaymentForSession(context, ref, session),
             ),
           ],
         ],

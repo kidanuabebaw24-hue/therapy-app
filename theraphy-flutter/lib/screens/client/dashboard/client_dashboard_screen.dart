@@ -17,6 +17,8 @@ import 'widgets/anxiety_chart_card.dart';
 import 'widgets/quick_actions_grid.dart';
 import 'widgets/activity_carousel.dart';
 import 'widgets/motivation_quote_card.dart';
+import '../../../features/payments/utils/payment_flow.dart';
+import '../../../features/payments/widgets/payment_due_banner.dart';
 
 class ClientDashboardScreen extends ConsumerStatefulWidget {
   const ClientDashboardScreen({super.key});
@@ -82,6 +84,18 @@ class _ClientDashboardScreenState extends ConsumerState<ClientDashboardScreen> {
               const SliverToBoxAdapter(child: AnxietyChartCard()),
               const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
+              if (sessionState.needsPayment.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: PaymentDueBanner(
+                    session: sessionState.needsPayment.first,
+                    onPay: () => openPaymentForSession(
+                      context,
+                      ref,
+                      sessionState.needsPayment.first,
+                    ),
+                  ),
+                ),
+
               // Upcoming Session
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -93,7 +107,8 @@ class _ClientDashboardScreenState extends ConsumerState<ClientDashboardScreen> {
                       const SizedBox(height: 12),
                       if (sessionState.isLoading)
                         const _LoadingPlaceholder()
-                      else if (sessionState.upcoming.isEmpty)
+                      else if (sessionState.upcoming.isEmpty &&
+                          sessionState.needsPayment.isEmpty)
                         _EmptyActionCard(
                           icon: Icons.calendar_today_rounded,
                           message: l10n.noSessionsScheduled,
@@ -104,7 +119,16 @@ class _ClientDashboardScreenState extends ConsumerState<ClientDashboardScreen> {
                       else
                         _UpcomingSessionCard(
                           session: sessionState.upcoming.first,
-                          joinLabel: l10n.join,
+                          joinLabel: sessionState.upcoming.first.needsPayment
+                              ? 'Pay Now'
+                              : l10n.join,
+                          onAction: sessionState.upcoming.first.needsPayment
+                              ? () => openPaymentForSession(
+                                    context,
+                                    ref,
+                                    sessionState.upcoming.first,
+                                  )
+                              : null,
                         ),
                     ],
                   ),
@@ -221,7 +245,12 @@ class _ClientDashboardScreenState extends ConsumerState<ClientDashboardScreen> {
 class _UpcomingSessionCard extends StatelessWidget {
   final dynamic session;
   final String joinLabel;
-  const _UpcomingSessionCard({required this.session, required this.joinLabel});
+  final VoidCallback? onAction;
+  const _UpcomingSessionCard({
+    required this.session,
+    required this.joinLabel,
+    this.onAction,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -265,7 +294,7 @@ class _UpcomingSessionCard extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           ElevatedButton(
-            onPressed: () {},
+            onPressed: onAction,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,

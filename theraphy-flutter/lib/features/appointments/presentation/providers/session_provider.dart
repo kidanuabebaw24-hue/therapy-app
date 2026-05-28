@@ -32,8 +32,15 @@ class SessionState {
     );
   }
 
+  List<SessionModel> get needsPayment => sessions
+      .where((s) => s.needsPayment)
+      .toList()
+    ..sort((a, b) => a.date.compareTo(b.date));
+
   List<SessionModel> get upcoming => sessions
-      .where((s) => (s.isScheduled || s.isApproved || s.isPending) && s.date.isAfter(DateTime.now()))
+      .where((s) =>
+          (s.isScheduled || s.isApproved || s.isPending) &&
+          !s.date.isBefore(DateTime.now().subtract(const Duration(hours: 1))))
       .toList()
     ..sort((a, b) => a.date.compareTo(b.date));
 
@@ -43,7 +50,10 @@ class SessionState {
     ..sort((a, b) => a.date.compareTo(b.date));
 
   List<SessionModel> get past => sessions
-      .where((s) => s.isCompleted || s.isRejected || s.date.isBefore(DateTime.now()))
+      .where((s) =>
+          (s.isCompleted || s.isRejected || s.isCancelled) &&
+          !s.needsPayment &&
+          s.date.isBefore(DateTime.now()))
       .toList()
     ..sort((a, b) => b.date.compareTo(a.date));
 }
@@ -58,13 +68,17 @@ class SessionNotifier extends StateNotifier<SessionState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final response = await _apiClient.get(ApiConstants.myAppointments);
-      final data = response.data['data'];
+      final body = response.data;
+      final data = body is Map ? body['data'] : body;
       if (data == null) {
         state = state.copyWith(sessions: [], isLoading: false);
         return;
       }
-      final rawData = data as List<dynamic>;
-      final sessions = rawData.map((e) => SessionModel.fromJson(e as Map<String, dynamic>)).toList();
+      final List<dynamic> rawData =
+          data is List ? data : (data['appointments'] as List? ?? []);
+      final sessions = rawData
+          .map((e) => SessionModel.fromJson(e as Map<String, dynamic>))
+          .toList();
       state = state.copyWith(sessions: sessions, isLoading: false);
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());

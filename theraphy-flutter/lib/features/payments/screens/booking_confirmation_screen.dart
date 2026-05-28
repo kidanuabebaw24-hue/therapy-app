@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../widgets/app_button.dart';
+import '../../../routes/app_routes.dart';
 import '../providers/payment_provider.dart';
 
 class BookingConfirmationScreen extends ConsumerWidget {
@@ -30,6 +31,8 @@ class BookingConfirmationScreen extends ConsumerWidget {
         : 'REF-BOOKING-001';
     final isPendingAdminApproval =
         booking.bookingStatus == 'pending_admin_approval';
+    final isApproved =
+        booking.bookingStatus == 'approved' && booking.paymentStatus != 'paid';
     final isScheduled = booking.bookingStatus == 'scheduled';
     final statusLabel = isPendingAdminApproval
         ? 'PENDING ADMIN APPROVAL'
@@ -180,12 +183,39 @@ class BookingConfirmationScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 48),
 
-              // Back to Dashboard action button
+              if (isApproved) ...[
+                AppButton(
+                  label: 'Proceed to Payment',
+                  onPressed: () => context.push(AppRoutes.bookingSummary),
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (isPendingAdminApproval) ...[
+                AppButton(
+                  label: 'Check Approval Status',
+                  onPressed: () async {
+                    final ready = await ref
+                        .read(paymentProvider.notifier)
+                        .syncApprovedBookingFromServer();
+                    if (!context.mounted) return;
+                    if (ready) {
+                      context.push(AppRoutes.bookingSummary);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Still waiting for admin approval. You will be notified when ready to pay.',
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+              ],
               AppButton(
                 label: 'Back to Dashboard',
-                onPressed: () {
-                  context.go('/dashboard');
-                },
+                onPressed: () => context.go('/dashboard'),
               ),
               const SizedBox(height: 24),
             ],

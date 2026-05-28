@@ -5,6 +5,7 @@ import '../../../core/constants/app_text_styles.dart';
 import '../../../models/notification_model.dart';
 import '../../../providers/notification_provider.dart';
 import '../../../widgets/app_card.dart';
+import '../../../features/payments/utils/payment_flow.dart';
 
 class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
@@ -50,12 +51,21 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                     padding: const EdgeInsets.all(16),
                     itemCount: state.notifications.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (_, i) => _NotificationTile(
-                      notification: state.notifications[i],
-                      onTap: () => ref
-                          .read(notificationProvider.notifier)
-                          .markRead(state.notifications[i].id),
-                    ),
+                    itemBuilder: (_, i) {
+                      final notification = state.notifications[i];
+                      return _NotificationTile(
+                        notification: notification,
+                        onTap: () async {
+                          await ref
+                              .read(notificationProvider.notifier)
+                              .markRead(notification.id);
+                          if (!context.mounted) return;
+                          if (notification.type == 'booking_approved') {
+                            await openFirstPendingPayment(context, ref);
+                          }
+                        },
+                      );
+                    },
                   ),
                 ),
     );

@@ -6,6 +6,8 @@ class SessionModel {
   final String therapistId;
   final String? patientName;
   final String? therapistName;
+  final String? therapistSpecialization;
+  final double? therapistHourlyRate;
   final DateTime date;
   final int duration;
   final String type; // cbt | exposure | consultation | followup
@@ -21,6 +23,8 @@ class SessionModel {
     required this.therapistId,
     this.patientName,
     this.therapistName,
+    this.therapistSpecialization,
+    this.therapistHourlyRate,
     required this.date,
     required this.duration,
     required this.type,
@@ -32,7 +36,8 @@ class SessionModel {
 
   bool get isScheduled => status == 'scheduled';
   bool get isCompleted => status == 'completed';
-  bool get isCancelled => status == 'cancelled';
+  bool get isCancelled =>
+      status == 'cancelled' || status == 'no_show';
   bool get isPending =>
       status == 'pending' ||
       status == 'pending_admin_approval' ||
@@ -42,6 +47,7 @@ class SessionModel {
   bool get isApproved => status == 'approved';
   bool get isRejected => status == 'rejected';
   bool get isPaid => paymentStatus == 'paid';
+  bool get needsPayment => isApproved && !isPaid;
 
   factory SessionModel.fromJson(Map<String, dynamic> json) {
     final patientRaw = json['patient'];
@@ -60,12 +66,26 @@ class SessionModel {
       return raw['name'] as String?;
     }
 
+    double? resolveHourlyRate(dynamic raw) {
+      if (raw is! Map<String, dynamic>) return null;
+      final rate = raw['hourlyRate'];
+      if (rate is num) return rate.toDouble();
+      return null;
+    }
+
+    String? resolveSpecialization(dynamic raw) {
+      if (raw is! Map<String, dynamic>) return null;
+      return raw['specialization'] as String?;
+    }
+
     return SessionModel(
       id: json['id'] as String? ?? '',
       patientId: resolveId(patientRaw, 'patientId'),
       therapistId: resolveId(therapistRaw, 'therapistId'),
       patientName: resolveName(patientRaw),
       therapistName: resolveName(therapistRaw),
+      therapistSpecialization: resolveSpecialization(therapistRaw),
+      therapistHourlyRate: resolveHourlyRate(therapistRaw),
       date: DateTime.parse(json['date'] as String),
       duration: json['duration'] as int? ?? 60,
       type: json['type'] as String? ?? 'consultation',
