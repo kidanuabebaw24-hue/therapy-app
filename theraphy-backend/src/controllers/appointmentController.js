@@ -7,28 +7,63 @@ import { createNotification } from '../utils/notificationHelper.js';
 
 const BLOCKING_STATUSES = ['pending_payment', 'pending_admin_approval', 'approved', 'scheduled', 'pending'];
 
-const parseAppointmentDateTime = (appointmentDate, appointmentTime) => {
+const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+const normalizeDayName = (value) => {
+  if (!value || typeof value !== 'string') return null;
+  const normalized = value.trim().toLowerCase();
+  return WEEKDAY_NAMES.find((day) => day.toLowerCase() === normalized) || null;
+};
+
+const parseAppointmentDateTime = (
+  appointmentDate,
+  appointmentTime,
+  timezoneOffsetMinutes,
+  payloadMode,
+) => {
   const datePart = appointmentDate?.split?.('T')?.[0] || appointmentDate;
   if (!datePart || !appointmentTime) return null;
-  const parsed = new Date(`${datePart}T${appointmentTime}:00`);
+
+  const [year, month, day] = String(datePart).split('-').map(Number);
+  const [hour, minute] = String(appointmentTime).split(':').map(Number);
+  if ([year, month, day, hour, minute].some((v) => Number.isNaN(v))) return null;
+
+  // Backward/forward-compatible modes:
+  // - utc_normalized: date/time already represent UTC components
+  // - default: date/time represent client local wall-clock time
+  const utcTimestamp = Date.UTC(year, month - 1, day, hour, minute, 0, 0);
+  if (payloadMode === 'utc_normalized') {
+    const parsedUtc = new Date(utcTimestamp);
+    return Number.isNaN(parsedUtc.getTime()) ? null : parsedUtc;
+  }
+
+  const offset = Number.isFinite(Number(timezoneOffsetMinutes)) ? Number(timezoneOffsetMinutes) : 0;
+  const parsed = new Date(utcTimestamp + offset * 60000);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
-const isWithinWorkingHours = (workingHours, startTime, duration) => {
+const isWithinWorkingHours = (workingHours, startTime, duration, options = {}) => {
   if (!Array.isArray(workingHours) || workingHours.length === 0) return true;
-  const dayName = startTime.toLocaleDateString('en-US', { weekday: 'long' });
-  const todaySchedule = workingHours.find((entry) => entry?.day === dayName && entry?.enabled);
+
+  const timezoneOffsetMinutes = Number.isFinite(Number(options.timezoneOffsetMinutes))
+    ? Number(options.timezoneOffsetMinutes)
+    : 0;
+  const localStart = new Date(startTime.getTime() - timezoneOffsetMinutes * 60000);
+  const dayName =
+    normalizeDayName(options.appointmentDay) || WEEKDAY_NAMES[localStart.getUTCDay()];
+  const todaySchedule = workingHours.find(
+    (entry) => normalizeDayName(entry?.day) === dayName && entry?.enabled,
+  );
   if (!todaySchedule) return false;
 
   const [startHour, startMinute] = String(todaySchedule.startTime || '00:00').split(':').map(Number);
   const [endHour, endMinute] = String(todaySchedule.endTime || '23:59').split(':').map(Number);
-  const workStart = new Date(startTime);
-  workStart.setHours(startHour || 0, startMinute || 0, 0, 0);
-  const workEnd = new Date(startTime);
-  workEnd.setHours(endHour || 23, endMinute || 59, 59, 999);
+  const slotStartMinutes = localStart.getUTCHours() * 60 + localStart.getUTCMinutes();
+  const slotEndMinutes = slotStartMinutes + duration;
+  const workStartMinutes = (startHour || 0) * 60 + (startMinute || 0);
+  const workEndMinutes = (endHour || 23) * 60 + (endMinute || 59);
 
-  const bookingEnd = new Date(startTime.getTime() + duration * 60000);
-  return startTime >= workStart && bookingEnd <= workEnd;
+  return slotStartMinutes >= workStartMinutes && slotEndMinutes <= workEndMinutes;
 };
 
 const checkTherapistAvailability = async ({
@@ -36,6 +71,8 @@ const checkTherapistAvailability = async ({
   startTime,
   duration = 50,
   excludeAppointmentId,
+  appointmentDay,
+  timezoneOffsetMinutes,
 }) => {
   const therapist = await prisma.therapist.findUnique({
     where: { id: therapistId },
@@ -45,7 +82,10 @@ const checkTherapistAvailability = async ({
     return { available: false, message: 'Therapist not found' };
   }
 
-  const worksAtThatTime = isWithinWorkingHours(therapist.workingHours, startTime, duration);
+  const worksAtThatTime = isWithinWorkingHours(therapist.workingHours, startTime, duration, {
+    appointmentDay,
+    timezoneOffsetMinutes,
+  });
   if (!worksAtThatTime) {
     return {
       available: false,
@@ -85,12 +125,25 @@ const checkTherapistAvailability = async ({
 
 export const checkAppointmentAvailability = async (req, res) => {
   try {
-    const { therapistId, appointmentDate, appointmentTime, duration = 50 } = req.body;
+    const {
+      therapistId,
+      appointmentDate,
+      appointmentTime,
+      appointmentDay,
+      timezoneOffsetMinutes,
+      payloadMode,
+      duration = 50,
+    } = req.body;
     if (!therapistId || !appointmentDate || !appointmentTime) {
       return sendError(res, 'therapistId, appointmentDate and appointmentTime are required', 400);
     }
 
-    const startTime = parseAppointmentDateTime(appointmentDate, appointmentTime);
+    const startTime = parseAppointmentDateTime(
+      appointmentDate,
+      appointmentTime,
+      timezoneOffsetMinutes,
+      payloadMode,
+    );
     if (!startTime) {
       return sendError(res, 'Invalid appointment date/time format', 400);
     }
@@ -99,6 +152,8 @@ export const checkAppointmentAvailability = async (req, res) => {
       therapistId,
       startTime,
       duration: Number(duration) || 50,
+      appointmentDay,
+      timezoneOffsetMinutes,
     });
     return sendSuccess(res, result, result.message);
   } catch (error) {
@@ -291,7 +346,18 @@ export const completeAppointment = async (req, res) => {
 
 export const bookAppointment = async (req, res) => {
   try {
-    const { therapistId, date, duration, notes, type, appointmentDate, appointmentTime } = req.body;
+    const {
+      therapistId,
+      date,
+      duration,
+      notes,
+      type,
+      appointmentDate,
+      appointmentTime,
+      appointmentDay,
+      timezoneOffsetMinutes,
+      payloadMode,
+    } = req.body;
     const patientProfile = req.user.patientProfile;
 
     if (!patientProfile) return sendError(res, 'Profile not found', 404);
@@ -384,7 +450,12 @@ export const bookAppointment = async (req, res) => {
 
     const start =
       appointmentDate && appointmentTime
-        ? parseAppointmentDateTime(appointmentDate, appointmentTime)
+        ? parseAppointmentDateTime(
+            appointmentDate,
+            appointmentTime,
+            timezoneOffsetMinutes,
+            payloadMode,
+          )
         : new Date(date);
     if (!start || Number.isNaN(start.getTime())) {
       return sendError(res, 'Invalid appointment date/time', 400);
@@ -394,6 +465,8 @@ export const bookAppointment = async (req, res) => {
       therapistId: targetTherapistId,
       startTime: start,
       duration: Number(duration) || 50,
+      appointmentDay,
+      timezoneOffsetMinutes,
     });
     if (!availability.available) {
       return sendSuccess(
