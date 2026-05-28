@@ -15,6 +15,7 @@ class AppRoutes {
   static const moodTracking = '/mood';
   static const sessions = '/sessions';
   static const aiChat = '/ai-chat';
+  static const therapistChat = '/therapist-chat';
   static const cbtExercises = '/cbt';
   static const cbtExerciseDetail = '/cbt/exercise/:id';
   static const breathingExercise = '/cbt/breathing';

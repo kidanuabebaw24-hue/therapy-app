@@ -146,12 +146,12 @@ const TherapistChat = () => {
 
     socket.on('new-message', (message) => {
       console.log('📨 New message received:', message);
-      
-      // Add message to current conversation if it's active
+
       if (message.conversationId === activeConversation?.id) {
-        setMessages((prev) => [...prev, message]);
-        
-        // Mark as read
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === message.id)) return prev;
+          return [...prev, message];
+        });
         socket.emit('mark-read', { conversationId: activeConversation.id });
       }
 
@@ -188,9 +188,18 @@ const TherapistChat = () => {
       }
     });
 
+    socket.on('message-sent', (message) => {
+      if (message.conversationId === activeConversation?.id) {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === message.id)) return prev;
+          return [...prev, message];
+        });
+      }
+    });
+
     socket.on('error', (error) => {
       console.error('❌ Socket error event:', error);
-      toast.error(error);
+      toast.error(typeof error === 'string' ? error : 'Chat error');
     });
   };
 
@@ -359,9 +368,15 @@ const TherapistChat = () => {
                   <div className="conversation-preview">
                     <p className="last-message">
                       {conv.lastMessage
-                        ? conv.lastMessage.message.length > 30
-                          ? conv.lastMessage.message.substring(0, 30) + '...'
-                          : conv.lastMessage.message
+                        ? (() => {
+                            const text =
+                              conv.lastMessage.message ||
+                              conv.lastMessage.content ||
+                              '';
+                            return text.length > 30
+                              ? `${text.substring(0, 30)}...`
+                              : text;
+                          })()
                         : 'No messages yet'}
                     </p>
                     {conv.unreadCount > 0 && (

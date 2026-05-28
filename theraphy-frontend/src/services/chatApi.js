@@ -1,21 +1,32 @@
 import api from './api';
 
-// Get all conversations for the user
-export const getConversations = () => 
-  api.get('/chat/conversations').then(res => res.data);
+const unwrap = (body) => body?.data ?? body;
 
-// Get messages for a specific conversation
-export const getConversationMessages = (conversationId, page = 1, limit = 50) => 
-  api.get(`/chat/messages/${conversationId}?page=${page}&limit=${limit}`).then(res => res.data);
+export const getConversations = async () => {
+  const res = await api.get('/chat/conversations');
+  const list = unwrap(res.data);
+  return {
+    conversations: Array.isArray(list) ? list : [],
+  };
+};
 
-// Mark messages as read
-export const markMessagesAsRead = (conversationId) => 
-  api.put(`/chat/messages/read/${conversationId}`).then(res => res.data);
+export const getConversationMessages = async (conversationId, page = 1, limit = 50) => {
+  const res = await api.get(`/chat/messages/${conversationId}`, {
+    params: { page, limit },
+  });
+  const payload = unwrap(res.data);
+  return {
+    messages: payload?.messages ?? [],
+    pagination: payload?.pagination,
+  };
+};
 
-// Get unread message count
-export const getUnreadCount = () => 
-  api.get('/chat/unread').then(res => res.data);
+export const markMessagesAsRead = async (conversationId) => {
+  const res = await api.put(`/chat/messages/read/${conversationId}`);
+  return unwrap(res.data);
+};
 
-// Search messages
-export const searchMessages = (conversationId, query) => 
-  api.get(`/chat/search/${conversationId}?q=${query}`).then(res => res.data);
+export const getUnreadCount = async () => {
+  const res = await api.get('/chat/unread');
+  return unwrap(res.data);
+};

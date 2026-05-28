@@ -141,6 +141,12 @@ class _ClientDashboardScreenState extends ConsumerState<ClientDashboardScreen> {
                       onTap: () => context.push(AppRoutes.assessmentQuestionnaire),
                     ),
                     QuickActionItem(
+                      label: 'Therapist Chat',
+                      icon: Icons.chat_rounded,
+                      color: AppColors.primary,
+                      onTap: () => context.push(AppRoutes.therapistChat),
+                    ),
+                    QuickActionItem(
                       label: l10n.aiChat,
                       icon: Icons.smart_toy_rounded,
                       color: Colors.deepPurpleAccent,

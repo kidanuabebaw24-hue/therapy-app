@@ -37,6 +37,9 @@ export const SocketProvider = ({ children }) => {
     newSocket.on('connect', () => {
       setIsConnected(true);
       setConnectionError(null);
+      if (user?.id) {
+        newSocket.emit('join', user.id);
+      }
     });
 
     newSocket.on('connect_error', (error) => {

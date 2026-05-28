@@ -37,7 +37,7 @@ const ClientChat = () => {
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 
   const conversationId = therapist
-    ? `${currentUser.id}_${therapist.id}`
+    ? `${currentUser.id}_${therapist.userId}`
     : null;
 
   useEffect(() => {
@@ -67,13 +67,22 @@ const ClientChat = () => {
 
   const fetchTherapist = async () => {
     try {
-      const data = await getMyTherapist();
-      if (!data.hasTherapist) {
+      const assignment = await getMyTherapist();
+      const therapistProfile = assignment?.therapist;
+      const therapistUser = therapistProfile?.user;
+
+      if (!therapistProfile || !therapistUser) {
         toast.error('No therapist assigned yet');
         navigate('/client/dashboard');
         return;
       }
-      setTherapist(data.therapist);
+
+      setTherapist({
+        userId: therapistUser.id,
+        name: therapistUser.name,
+        email: therapistUser.email,
+        specialization: therapistProfile.specialization || 'Therapist',
+      });
     } catch (error) {
       toast.error('Failed to load therapist information');
       navigate('/client/dashboard');
@@ -104,12 +113,23 @@ const ClientChat = () => {
     });
 
     socket.on('new-message', (message) => {
-      setMessages((prev) => [...prev, message]);
-      
-      // Mark as read if we're the receiver
-      if (message.receiver.id === currentUser.id) {
+      if (message.conversationId !== conversationId) return;
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === message.id)) return prev;
+        return [...prev, message];
+      });
+
+      if (message.receiver?.id === currentUser.id) {
         socket.emit('mark-read', { conversationId });
       }
+    });
+
+    socket.on('message-sent', (message) => {
+      if (message.conversationId !== conversationId) return;
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === message.id)) return prev;
+        return [...prev, message];
+      });
     });
 
     socket.on('user-typing', ({ isTyping }) => {
@@ -143,7 +163,7 @@ const ClientChat = () => {
     setSending(true);
 
     socket.emit('send-message', {
-      receiverId: therapist.id,
+      receiverId: therapist.userId,
       message: messageContent,
       conversationId,
     });

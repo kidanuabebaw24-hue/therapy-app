@@ -29,6 +29,12 @@ class ApiConstants {
   static const String bookAppointment = '/appointments/book';
   static const String appointments = '/appointments';
   static const String myAppointments = '/appointments/me';
+  static const String myTherapistAssignment = '/assignments/my-therapist';
+  static const String chatConversations = '/chat/conversations';
+  static String chatMessages(String conversationId) =>
+      '/chat/messages/$conversationId';
+  static String chatMarkRead(String conversationId) =>
+      '/chat/messages/read/$conversationId';
 
   // Mood & Progress
   static const String moods = '/moods';

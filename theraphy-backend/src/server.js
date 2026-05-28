@@ -1,34 +1,29 @@
 import app from './app.js';
 import http from 'http';
 import { Server } from 'socket.io';
+import { registerChatSocket } from './socket/chatSocket.js';
 
 const PORT = process.env.PORT || 5000;
 
 const server = http.createServer(app);
 
-// Initialize Socket.io (if needed)
 const io = new Server(server, {
   cors: {
-    origin: '*',
+    origin: [
+      process.env.FRONTEND_URL || 'http://localhost:5173',
+      'http://localhost:3000',
+      'http://localhost:5174',
+      '*',
+    ],
     methods: ['GET', 'POST'],
+    credentials: true,
   },
 });
 
-io.on('connection', (socket) => {
-  console.log('A user connected:', socket.id);
-  
-  socket.on('join', (userId) => {
-    socket.join(userId);
-    console.log(`User ${userId} joined their room`);
-  });
-
-  socket.on('disconnect', () => {
-    console.log('User disconnected');
-  });
-});
+registerChatSocket(io);
 
 server.listen(PORT, () => {
-  console.log(`🚀 Server VERSION 2.0 running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT} (HTTP + Socket.io chat)`);
 });
 
 export { io };

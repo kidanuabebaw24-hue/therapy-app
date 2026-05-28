@@ -29,6 +29,7 @@ import '../screens/client/mood/mood_tracking_screen.dart';
 import '../screens/client/sessions/sessions_screen.dart';
 import '../screens/client/ai_chat/ai_chat_screen.dart';
 import '../screens/client/ai_chat/ai_conversation_screen.dart';
+import '../screens/client/chat/therapist_chat_screen.dart';
 import '../screens/client/emergency/emergency_support_screen.dart';
 import '../screens/client/notifications/notifications_screen.dart';
 import '../features/payments/screens/booking_summary_screen.dart';
@@ -232,6 +233,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: AppRoutes.sessions,
             builder: (_, __) => const SessionsScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.therapistChat,
+            builder: (_, __) => const TherapistChatScreen(),
           ),
           GoRoute(
             path: AppRoutes.aiChat,
